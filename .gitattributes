@@ -1,2 +1,2 @@
 # Example of a `.gitattributes` file which reclassifies `.rb` files as Java:
-*.el linguist-language=Java
+*.el linguist-language=Edge-list
