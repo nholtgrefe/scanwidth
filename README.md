@@ -5,7 +5,7 @@ Repository corresponding to the MSc Thesis "Computing the Scanwidth of Directed 
 Citation in bibtex format:
 
 @masterthesis{holtgrefe2023scanwidth, 
-title={Computing the Scanwidth of Directed Acyclic Graphs}, author={Niels Holtgrefe}, year={2023}, month={7}, address={Delft, The Netherlands}, note={Available at \url{https://repository.tudelft.nl/}}, school={Delft University of Technology}, type= {Master's thesis}
+title={Computing the Scanwidth of Directed Acyclic Graphs}, author={Niels Holtgrefe}, year={2023}, month={7}, address={Delft, The Netherlands}, note={Available at \url{https://repository.tudelft.nl/}, school={Delft University of Technology}, type= {Master's thesis}
 }
 
 
