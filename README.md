@@ -30,4 +30,4 @@ extension.save_file(out_file)
 ```
 The important algorithms of the thesis are methods of the classes `DAG`/`Network`: `optimal_scanwidth`, `greedy_heuristic`, `cut_splitting_heuristic`, and `simulated_annealing`. All of them return a scanwith value, and an extension object. For the specific parameter-settings of these methods, we refer to the documentation in the file.
 
-The different classes also contain some other handy methods, such as the `canonical_tree_extension` method of the `Extension` class, which returns a `TreeExtension` object with the same scanwidth as the extension. For a complete overview of all methods and their uses, we refer to the documentation in python-file. We note that the methods starting with a `_` are meant for internal use only.
+The different classes also contain some other handy methods, such as the `canonical_tree_extension` method of the `Extension` class, which returns a `TreeExtension` object with the same scanwidth as the extension. For a complete overview of all methods and their uses, we refer to the documentation in the python-file. We note that the methods starting with a `_` are meant for internal use only.
