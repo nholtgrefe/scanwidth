@@ -1,12 +1,12 @@
 
 # Computing the Scanwidth of DAGs
 
-Repository corresponding to the MSc Thesis "Computing the Scanwidth of Directed Acyclic Graphs" by Niels Holtgrefe, available at https://repository.tudelft.nl/.
+Repository corresponding to the MSc Thesis "Computing the Scanwidth of Directed Acyclic Graphs" by Niels Holtgrefe, available at http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5.
 
 Citation of the thesis (and the repository) in bibtex format:
 
 @masterthesis{holtgrefe2023scanwidth, 
-title={Computing the Scanwidth of Directed Acyclic Graphs}, author={Niels Holtgrefe}, year={2023}, month={7}, address={Delft, The Netherlands}, note={Available at \url{https://repository.tudelft.nl/}}, school={Delft University of Technology}, type= {Master's thesis}
+title={Computing the Scanwidth of Directed Acyclic Graphs}, author={Niels Holtgrefe}, year={2023}, month={7}, address={Delft, The Netherlands}, note={Available at \url{http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5}, school={Delft University of Technology}, type= {Master's thesis}
 }
 
 
