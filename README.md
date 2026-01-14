@@ -12,16 +12,21 @@ This repository corresponds to the MSc Thesis:
 
 **_Computing the Scanwidth of Directed Acyclic Graphs_**  
 by **Niels Holtgrefe**  
-Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542e2023scanwidth, 
-  title   = {Computing the Scanwidth of Directed Acyclic Graphs}, 
-  author  = {Niels Holtgrefe}, 
-  year    = {2023}, 
-  month   = {7}, 
-  address = {Delft, The Netherlands}, 
-  note    = {Available at \url{http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5}}, 
-  school  = {Delft University of Technology}, 
-  type    = {Master's thesis}
+Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542e2023scanwidth)
+
+
+```bibtex
+@mastersthesis{holtgrefe2023scanwidth, 
+title={Computing the Scanwidth of Directed Acyclic Graphs}, 
+author={Niels Holtgrefe}, 
+year={2023}, 
+month={7}, 
+address={Delft, The Netherlands}, 
+note={Available at \url{http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5} }, 
+school={Delft University of Technology}, 
+type= {Master's thesis}
 }
+```
 
 
 
