@@ -1,59 +1,65 @@
-# **Computing the Scanwidth of DAGs**
+# Computing the Scanwidth of DAGs
 
-This repository contains the implementation for computing the scanwidth of directed acyclic graphs (DAGs). It corresponds to both the following paper and thesis:
+This repository contains the implementation for computing the scanwidth of directed acyclic graphs (DAGs).
 
-## **Paper**
+**Paper:** *Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe, Leo van Iersel, and Mark Jones (2024)
 
-**_Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs_**  
-by **Niels Holtgrefe, Leo van Iersel, and Mark Jones**
-
-```bibtex
-@article{holtgrefe2024scanwidth,
-title={Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs},
-author={Holtgrefe, Niels and van Iersel, Leo and Jones, Mark},
-journal={[Journal/ArXiv]},
-year={2024}
-}
-```
-
-## **Thesis**
-
-**_Computing the Scanwidth of Directed Acyclic Graphs_**  
-by **Niels Holtgrefe**  
+**Thesis:** *Computing the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe (2023)  
 Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5)
 
-```bibtex
-@mastersthesis{holtgrefe2023scanwidth, 
-title={Computing the Scanwidth of Directed Acyclic Graphs}, 
-author={Niels Holtgrefe}, 
-year={2023}, 
-month={7}, 
-address={Delft, The Netherlands}, 
-note={Available at \url{http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5} }, 
-school={Delft University of Technology}, 
-type= {Master's thesis}
-}
+---
+
+> **Note:** The experiments described in the paper and thesis were performed using the Python scripts in the `experiments/` folder. These scripts have been refactored and cleaned up to form the basis of the installable `scanwidth` package (version 0.1.0). The package provides a cleaner API while maintaining the same core algorithms. For details about the experimental materials, see `experiments/README.md`.
+
+---
+
+## Installation
+
+The scanwidth package can be installed via pip:
+
+```bash
+pip install scanwidth
 ```
 
-
-
-## Repository structure
-The repository contains three folders:
-* 'code', which contains the Python files used in the project. The file `ZODS_generator.py` contains the python-code used to generate all synthetic networks, while the file `plotting_module.py` contains some basic plotting-functionality that is imported in the main file. The main file is `scanwidth.py` which contains all the implemented algorithms (see below for more info on how to use it).
-* 'networks', containing two subfolders with the real and synthetic phylogenetic networks used in the paper and thesis. All networks are text-files in the edge-list format (`.el`), where each line contains one arc (e.g. `vertex1 vertex2`). The file names of the real networks are the same as in the original source (see http://phylnet.univ-mlv.fr/). The file names of the synthetic networks are in the format `a_ZODS_Lxxxx_Ryyyy_zzzzzz.el`, where 'x' denotes the number of leaves, 'y' the number of reticulations, and 'z' the number of the network.
-* 'experimental_results', which contains an `.xlsx`-file for the real networks, and one for the synthetic networks, containing the complete numerical results of all experiments for each network. The experiments are explained in Section 6 of the paper / Chapter 6 of the thesis.
-## How to use the code
-The main-file `scanwidth.py` is meant to be imported in a python script in the same directory. It contains four classes: `DAG`, `Network` (specifically for networks), `Extension`, and `TreeExtension`. The class `DAG` (or `Network`) is the important class for the scanwidth-algorithms, and uses `NetworkX` as its graph implementation. To illustrate its use, we show an example on how to find the exact value of the scanwidth `sw` of a DAG from a file `in_file`, and how to save the optimal extension in the file `out_file`.
+Or from source:
+```bash
+pip install -e .
 ```
-from scanwidth import DAG, Network, TreeExtension, Extension
-in_file = r'path\to\dag\in\edge-list\format.txt'
 
-G = DAG(in_file)
-sw, extension = G.optimal_scanwidth()
+## Quick Start
 
-out_file = r'file\path\where\extension\should\be\saved.txt'
-extension.save_file(out_file)
+```python
+from scanwidth import DAG, Extension, TreeExtension
+
+# Load a DAG from a file
+dag = DAG("path/to/graph.el")
+
+# Compute scanwidth using various algorithms
+sw, extension = dag.optimal_scanwidth()        # Exact algorithm
+sw, extension = dag.greedy_heuristic()        # Greedy heuristic
+sw, extension = dag.cut_splitting_heuristic()  # Cut-splitting heuristic
+sw, extension = dag.simulated_annealing()      # Simulated annealing
+
+# Save the extension
+extension.save_file("output.txt")
 ```
-The important algorithms described in the paper and thesis are methods of the classes `DAG`/`Network`: `optimal_scanwidth`, `greedy_heuristic`, `cut_splitting_heuristic`, and `simulated_annealing`. All of them return a scanwith value, and an extension object. For the specific parameter-settings of these methods, we refer to the documentation in the file.
 
-The different classes also contain some other handy methods, such as the `canonical_tree_extension` method of the `Extension` class, which returns a `TreeExtension` object with the same scanwidth as the extension. For a complete overview of all methods and their uses, we refer to the documentation in the python-file. We note that the methods starting with a `_` are meant for internal use only.
+## Algorithms
+
+The package provides several algorithms for computing scanwidth:
+
+- **`optimal_scanwidth()`** - Exact algorithm using dynamic programming
+- **`greedy_heuristic()`** - Fast greedy heuristic
+- **`cut_splitting_heuristic()`** - Cut-splitting heuristic
+- **`simulated_annealing()`** - Simulated annealing metaheuristic
+
+All methods return a tuple `(scanwidth_value, extension_object)`. For specific parameter settings and detailed documentation, refer to the source code.
+
+## Package Structure
+
+- **`src/scanwidth/`** - The installable Python package (version 0.1.0)
+- **`experiments/`** - Experimental materials (scripts, networks, results) used for the paper and thesis
+
+## License
+
+MIT License

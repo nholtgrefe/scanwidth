@@ -1,7 +1,7 @@
 import random
 import networkx as nx
 import numpy as np
-from scanwidth import Network
+from compute_scanwidth import Network
 
 '''
 Code for generating birth-hybridization network (ZODS-generator)
