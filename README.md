@@ -1,15 +1,16 @@
 # Computing the Scanwidth of DAGs
 
-This repository contains the implementation for computing the scanwidth of directed acyclic graphs (DAGs).
+This repository contains the source code for the Python package `scanwidth` aimed at computing the scanwidth of directed acyclic graphs (DAGs). The algorithms are to c
 
-**Paper:** *Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe, Leo van Iersel, and Mark Jones (2024)
+**Paper:** *Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe, Leo van Iersel, and Mark Jones (2024)  
+Available at: [arXiv:2403.12734](https://arxiv.org/abs/2403.12734)
 
 **Thesis:** *Computing the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe (2023)  
 Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5)
 
 ---
 
-> **Note:** The experiments described in the paper and thesis were performed using the Python scripts in the `experiments/` folder. These scripts have been refactored and cleaned up to form the basis of the installable `scanwidth` package (version 0.1.0). The package provides a cleaner API while maintaining the same core algorithms. For details about the experimental materials, see `experiments/README.md`.
+> **Note:** The experiments described in the paper and thesis were performed using the Python scripts in the `experiments/scripts/` folder. These scripts have been refactored and cleaned up to form the basis of the installable `scanwidth` package (version 0.1.0). For details about the experimental materials, see `experiments/README.md`.
 
 ---
 
@@ -55,11 +56,4 @@ The package provides several algorithms for computing scanwidth:
 
 All methods return a tuple `(scanwidth_value, extension_object)`. For specific parameter settings and detailed documentation, refer to the source code.
 
-## Package Structure
-
-- **`src/scanwidth/`** - The installable Python package (version 0.1.0)
-- **`experiments/`** - Experimental materials (scripts, networks, results) used for the paper and thesis
-
-## License
-
-MIT License
+> **Note:** The preliminary arXiv version of the paper used a separate repository called `ComputingScanwidth`, which is now deprecated. This repository is the most up-to-date version of the code and should be used instead.
