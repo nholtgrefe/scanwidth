@@ -2,6 +2,14 @@
 
 This directory contains all materials used for the experiments described in the paper and thesis.
 
+## Citation
+
+If you use these experimental materials in your research, please cite:
+
+*Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe, Leo van Iersel, and Mark Jones (2024)  
+Available at: [arXiv:2403.12734](https://arxiv.org/abs/2403.12734)
+
+
 ## Contents
 
 ### **`scripts/`** - Original Python Scripts
@@ -62,4 +70,3 @@ The experiments are explained in Section 6 of the paper / Chapter 6 of the thesi
 ## Note
 
 The scripts in this directory were used to perform the experiments described in the paper and thesis. The `compute_scanwidth.py` script forms the basis of version 0.1.0 of the installable `scanwidth` package.
-
