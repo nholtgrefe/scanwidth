@@ -52,6 +52,36 @@ def _build_star_to_sink(k: int) -> nx.DiGraph:
     return nx.DiGraph(edges)
 
 
+def _build_n09() -> nx.DiGraph:
+    """Build the n09 real-network DAG used for regression testing."""
+    edges = [
+        ("r", "v1"),
+        ("v1", "v2"),
+        ("v2", "v3"),
+        ("v3", "Gtricolor"),
+        ("v3", "Gangelensis"),
+        ("Gangelensis", "h1"),
+        ("h1", "SantaAnaCanyon"),
+        ("v2", "h2"),
+        ("h2", "Gachilleafolia"),
+        ("Gachilleafolia", "h3"),
+        ("h3", "Gclivorum"),
+        ("v1", "Gmillefoliata"),
+        ("Gmillefoliata", "h3"),
+        ("Gmillefoliata", "h4"),
+        ("h4", "CapeMendocino"),
+        ("r", "v4"),
+        ("v4", "v5"),
+        ("v5", "h2"),
+        ("v5", "h5"),
+        ("h5", "Gcapitata"),
+        ("Gcapitata", "h4"),
+        ("Gcapitata", "h1"),
+        ("v4", "h5"),
+    ]
+    return nx.DiGraph(edges)
+
+
 def test_extension_scanwidth_known_value() -> None:
     """Extension scanwidth matches known value on a small DAG."""
     graph = _build_two_to_one()
@@ -356,3 +386,34 @@ def test_tree_extension_init_requires_dag_wrapper() -> None:
         assert False, "Expected TypeError when graph is not a DAG instance."
     except TypeError:
         pass
+
+
+def test_n09_reduced_algorithms_regression_values() -> None:
+    """Regression test of reduced scanwidth values on real network n09."""
+    dag = DAG(_build_n09())
+
+    cases = [
+        ("xp", {}, {5}),
+        ("exhaustive", {}, {5}),
+        ("two_partition", {}, {5}),
+        ("three_partition", {}, {5}),
+        ("greedy", {}, {5, 6}),
+        ("random", {"seed": 42}, {5, 6}),
+        ("cut_splitting", {}, {5}),
+        (
+            "simulated_annealing",
+            {"max_iter": 100, "verbose": False, "seed": 42},
+            {5},
+        ),
+    ]
+
+    for algorithm, kwargs, expected_values in cases:
+        value, _ = edge_scanwidth(
+            dag,
+            algorithm=algorithm,
+            reduce=True,
+            **kwargs,
+        )
+        assert value in expected_values, (
+            f"{algorithm} returned {value}, expected one of {sorted(expected_values)}"
+        )
