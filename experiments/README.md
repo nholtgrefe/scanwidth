@@ -6,9 +6,7 @@ This directory contains all materials used for the experiments described in the 
 
 If you use these experimental materials in your research, please cite:
 
-*Exact and Heuristic Computation of the Scanwidth of Directed Acyclic Graphs* by Niels Holtgrefe, Leo van Iersel, and Mark Jones (2024)  
-Available at: [arXiv:2403.12734](https://arxiv.org/abs/2403.12734)
-
+**Exact and heuristic computation of the scanwidth of directed acyclic graphs**. *Niels Holtgrefe, Leo van Iersel, and Mark Jones*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
 
 ## Contents
 
