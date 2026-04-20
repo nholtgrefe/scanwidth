@@ -58,7 +58,9 @@ def test_extension_scanwidth_known_value() -> None:
     extension = Extension(dag=DAG(graph), ordering=[3, 1, 2])
 
     assert len(extension.edge_scanwidth_bag(3)) == 2
+    assert extension.node_scanwidth_bag(3) == {1, 2}
     assert extension.edge_scanwidth() == 2
+    assert extension.node_scanwidth() == 2
 
 
 def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
@@ -71,7 +73,40 @@ def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
 
     assert tree_extension.is_canonical()
     assert tree_extension.edge_scanwidth() == extension.edge_scanwidth()
+    assert tree_extension.node_scanwidth() == extension.node_scanwidth()
     assert roundtrip_extension.edge_scanwidth() == extension.edge_scanwidth()
+    assert roundtrip_extension.node_scanwidth() == extension.node_scanwidth()
+
+
+def test_extension_properties_and_canonical_alias() -> None:
+    """Extension properties and canonical alias behave as expected."""
+    dag = DAG(_build_two_to_one())
+    extension = Extension(dag=dag, ordering=[3, 1, 2])
+
+    # dag property exposes the wrapped DAG object
+    assert extension.dag is dag
+
+    # ordering property returns a copy
+    ordering_view = extension.ordering
+    ordering_view.append("x")
+    assert extension.ordering == [3, 1, 2]
+
+    # both canonical constructors are equivalent interfaces
+    tree_via_to = extension.to_canonical_tree_extension()
+    tree_via_alias = extension.canonical_tree_extension()
+    assert tree_via_to.is_canonical()
+    assert tree_via_alias.is_canonical()
+    assert tree_via_to.edge_scanwidth() == tree_via_alias.edge_scanwidth()
+
+
+def test_canonical_tree_extension_preserves_vertex_bags() -> None:
+    """Canonical tree extension matches extension bags per vertex."""
+    extension = Extension(dag=DAG(_build_two_to_one()), ordering=[3, 1, 2])
+    tree_extension = extension.canonical_tree_extension()
+
+    for vertex in extension.ordering:
+        assert extension.edge_scanwidth_bag(vertex) == tree_extension.edge_scanwidth_bag(vertex)
+        assert extension.node_scanwidth_bag(vertex) == tree_extension.node_scanwidth_bag(vertex)
 
 
 def test_tree_extension_edge_scanwidth_bag_properties() -> None:
@@ -90,6 +125,18 @@ def test_tree_extension_edge_scanwidth_bag_properties() -> None:
         }
         assert bag == expected
         assert len(bag) <= tree_extension.edge_scanwidth()
+        assert tree_extension.node_scanwidth_bag(vertex) == {u for (u, _) in bag}
+
+
+def test_tree_extension_properties_and_roundtrip_ordering() -> None:
+    """TreeExtension properties and roundtrip ordering are consistent."""
+    extension = Extension(dag=DAG(_build_two_to_one()), ordering=[3, 1, 2])
+    tree_extension = extension.canonical_tree_extension()
+    roundtrip = tree_extension.to_extension()
+
+    assert tree_extension.dag is extension.dag
+    assert set(tree_extension.tree.nodes()) == set(extension.ordering)
+    assert roundtrip.ordering == extension.ordering
 
 
 def test_tree_extension_edge_scanwidth_bag_rejects_unknown_vertex() -> None:
@@ -115,6 +162,26 @@ def test_extension_edge_scanwidth_bag_rejects_unknown_vertex() -> None:
         assert False, "Expected ValueError for unknown extension vertex."
     except ValueError:
         pass
+
+
+def test_extension_node_scanwidth_bag_matches_edge_parents() -> None:
+    """Node bag equals parent set of the edge bag per extension vertex."""
+    extension = Extension(dag=DAG(_build_two_to_one()), ordering=[3, 1, 2])
+    for vertex in extension.ordering:
+        edge_bag = extension.edge_scanwidth_bag(vertex)
+        assert extension.node_scanwidth_bag(vertex) == {u for (u, _) in edge_bag}
+        assert len(extension.node_scanwidth_bag(vertex)) <= extension.node_scanwidth()
+
+
+def test_tree_extension_node_scanwidth_bag_matches_edge_parents() -> None:
+    """Node bag equals parent set of edge bag per tree extension vertex."""
+    tree_extension = Extension(
+        dag=DAG(_build_two_to_one()), ordering=[3, 1, 2],
+    ).canonical_tree_extension()
+    for vertex in tree_extension.tree.nodes():
+        edge_bag = tree_extension.edge_scanwidth_bag(vertex)
+        assert tree_extension.node_scanwidth_bag(vertex) == {u for (u, _) in edge_bag}
+        assert len(tree_extension.node_scanwidth_bag(vertex)) <= tree_extension.node_scanwidth()
 
 
 def test_exact_functions_match_known_chain_scanwidth() -> None:

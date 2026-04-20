@@ -62,6 +62,16 @@ class TreeExtension:
 
         return max(len(self.edge_scanwidth_bag(v)) for v in self.tree.nodes())
 
+    def node_scanwidth(self) -> int:
+        """Calculate node scanwidth of the tree extension for the DAG.
+
+        Returns
+        -------
+        int
+            The node scanwidth value.
+        """
+        return max(len(self.node_scanwidth_bag(v)) for v in self.tree.nodes())
+
     def edge_scanwidth_bag(self, vertex: object) -> set:
         """Return the set of edges in the edge scanwidth bag for a tree vertex.
         
@@ -87,6 +97,35 @@ class TreeExtension:
         left.add(vertex)
         return {
             (u, w)
+            for (u, w) in self.dag.graph.edges()
+            if u not in left and w in left
+        }
+
+    def node_scanwidth_bag(self, vertex: object) -> set:
+        """Return node scanwidth bag for a tree extension vertex.
+
+        Parameters
+        ----------
+        vertex : object
+            Vertex of the tree extension.
+
+        Returns
+        -------
+        set
+            Set of parent vertices of edges in ``GW_v``.
+
+        Raises
+        ------
+        ValueError
+            If ``vertex`` is not a vertex of ``self.tree``.
+        """
+        if vertex not in self.tree.nodes:
+            raise ValueError("vertex must be a node of the tree extension.")
+
+        left = nx.descendants(self.tree, vertex)
+        left.add(vertex)
+        return {
+            u
             for (u, w) in self.dag.graph.edges()
             if u not in left and w in left
         }

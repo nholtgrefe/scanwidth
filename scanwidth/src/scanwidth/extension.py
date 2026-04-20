@@ -64,6 +64,16 @@ class Extension:
         """
         return max(len(self.edge_scanwidth_bag(v)) for v in self._ordering)
 
+    def node_scanwidth(self) -> int:
+        """Calculate node scanwidth of the extension ordering for the DAG.
+
+        Returns
+        -------
+        int
+            The node scanwidth value.
+        """
+        return max(len(self.node_scanwidth_bag(v)) for v in self._ordering)
+
     def edge_scanwidth_bag(self, vertex: object) -> set:
         """Return the set of edges in the edge scanwidth bag for a vertex.
 
@@ -85,22 +95,54 @@ class Extension:
         if vertex not in self._ordering:
             raise ValueError("vertex must be a node in the extension order.")
 
-        i = self._ordering.index(vertex)
-        left = self._ordering[0:i + 1]
-
-        sub = self._dag.graph.subgraph(left)
-        components = [comp for comp in nx.weakly_connected_components(sub)]
-        connected_vertices = set()
-        for comp in components:
-            if vertex in comp:
-                connected_vertices = comp
-                break
+        connected_vertices = self._connected_vertices_for(vertex)
 
         return {
             (u, w)
             for (u, w) in self._dag.graph.edges()
             if u not in connected_vertices and w in connected_vertices
         }
+
+    def node_scanwidth_bag(self, vertex: object) -> set:
+        """Return node scanwidth bag for a vertex in the extension ordering.
+
+        Parameters
+        ----------
+        vertex : object
+            Vertex in the extension order ``ordering``.
+
+        Returns
+        -------
+        set
+            Set of parent vertices of edges in ``SW_v``.
+
+        Raises
+        ------
+        ValueError
+            If ``vertex`` is not in the extension order.
+        """
+        if vertex not in self._ordering:
+            raise ValueError("vertex must be a node in the extension order.")
+
+        connected_vertices = self._connected_vertices_for(vertex)
+
+        return {
+            u
+            for (u, w) in self._dag.graph.edges()
+            if u not in connected_vertices and w in connected_vertices
+        }
+
+    def _connected_vertices_for(self, vertex: object) -> set:
+        """Return connected component of ``vertex`` in current ordering prefix."""
+        i = self._ordering.index(vertex)
+        left = self._ordering[0:i + 1]
+
+        sub = self._dag.graph.subgraph(left)
+        components = [comp for comp in nx.weakly_connected_components(sub)]
+        for comp in components:
+            if vertex in comp:
+                return comp
+        return set()
     
     def to_canonical_tree_extension(self) -> TreeExtension:
         """Create canonical tree extension with same edge scanwidth as ordering.
