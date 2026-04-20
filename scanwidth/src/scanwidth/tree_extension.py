@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
+from scanwidth.dag import DAG
+
 if TYPE_CHECKING:
     from scanwidth.extension import Extension
 
@@ -13,31 +15,35 @@ class TreeExtension:
     
     def __init__(
         self, 
-        graph: nx.DiGraph, 
+        dag: DAG, 
         tree: nx.DiGraph
     ) -> None:
         """Initialize a TreeExtension object.
         
         Parameters
         ----------
-        graph : nx.DiGraph
-            The corresponding graph as a NetworkX DiGraph.
+        dag : DAG
+            The corresponding DAG wrapper object.
         tree : nx.DiGraph
             The tree extension as a NetworkX DiGraph.
 
         Raises
         ------
+        TypeError
+            If ``dag`` is not a :class:`DAG`.
         ValueError
-            If ``tree`` is not a valid tree extension of ``graph``.
+            If ``tree`` is not a valid tree extension of ``dag``.
         """
-        self._graph = graph
+        if not isinstance(dag, DAG):
+            raise TypeError("dag must be a DAG instance.")
+        self._graph = dag
         self._tree = tree
         if not self._is_tree_extension():
             raise ValueError("tree is not a valid tree extension of graph.")
 
     @property
-    def graph(self) -> nx.DiGraph:
-        """Return the underlying graph."""
+    def graph(self) -> DAG:
+        """Return the underlying DAG object."""
         return self._graph
 
     @property
@@ -79,7 +85,11 @@ class TreeExtension:
         
         GW_v = 0
         for w in left:
-            GW_v = GW_v + self.graph.in_degree(w) - self.graph.out_degree(w)
+            GW_v = (
+                GW_v
+                + self.graph.graph.in_degree(w)
+                - self.graph.graph.out_degree(w)
+            )
             
         return GW_v
     
@@ -109,14 +119,14 @@ class TreeExtension:
         for v in self.tree.nodes():
             left = nx.descendants(self.tree, v)
             left.add(v)
-            if not nx.is_weakly_connected(self.graph.subgraph(left)):
+            if not nx.is_weakly_connected(self.graph.graph.subgraph(left)):
                 return False
             
         return True
 
     def _is_tree_extension(self) -> bool:
         """Return whether ``self.tree`` is a valid tree extension of ``graph``."""
-        graph_nodes = set(self.graph.nodes())
+        graph_nodes = set(self.graph.graph.nodes())
         tree_nodes = set(self.tree.nodes())
         if graph_nodes != tree_nodes:
             return False
@@ -142,7 +152,7 @@ class TreeExtension:
             elif indeg != 1:
                 return False
 
-        for (u, v) in self.graph.edges():
+        for (u, v) in self.graph.graph.edges():
             if not nx.has_path(self.tree, u, v):
                 return False
         return True

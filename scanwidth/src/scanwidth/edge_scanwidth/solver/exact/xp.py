@@ -104,7 +104,7 @@ class XpSolver(Solver):
             if sw == infinity:
                 table.drop_infeasible(infinity)
                 continue
-            return SolverResult(value=sw, extension=Extension(graph, sigma))
+            return SolverResult(value=sw, extension=Extension(dag, sigma))
 
         raise RuntimeError("XP solver failed to converge.")
 
@@ -123,7 +123,7 @@ class XpSolver(Solver):
             raise ValueError(
                 f"No extension exists with edge scanwidth <= {k}."
             )
-        return SolverResult(value=sw, extension=Extension(graph, sigma))
+        return SolverResult(value=sw, extension=Extension(DAG(graph), sigma))
 
     def _restricted_partial_scanwidth(
         self,

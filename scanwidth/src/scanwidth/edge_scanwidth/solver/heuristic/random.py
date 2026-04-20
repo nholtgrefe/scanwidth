@@ -71,5 +71,5 @@ class RandomSolver(Solver):
             ]
             components_T.append(connected_vertices)
 
-        extension = Extension(graph, sigma)
+        extension = Extension(dag, sigma)
         return SolverResult(value=sw, extension=extension)

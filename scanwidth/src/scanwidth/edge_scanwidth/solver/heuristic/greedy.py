@@ -68,5 +68,5 @@ class GreedySolver(Solver):
             ]
             components_T.append(connection_dict[chosen])
 
-        extension = Extension(graph, sigma)
+        extension = Extension(dag, sigma)
         return SolverResult(value=sw, extension=extension)

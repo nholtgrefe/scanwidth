@@ -35,7 +35,7 @@ class CutSplittingSolver(Solver):
         """
         graph = dag.graph
         sigma = self._recursive_cut_splitting(graph)
-        extension = Extension(graph, sigma)
+        extension = Extension(dag, sigma)
         return SolverResult(value=extension.edge_scanwidth(), extension=extension)
 
     def _recursive_cut_splitting(self, graph: nx.DiGraph) -> List:

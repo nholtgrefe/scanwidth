@@ -36,7 +36,7 @@ class ExhaustiveSolver(Solver):
         """
         graph = dag.graph
         extensions = [ext[::-1] for ext in nx.all_topological_sorts(graph)]
-        sw_values = [Extension(graph, sigma).edge_scanwidth() for sigma in extensions]
+        sw_values = [Extension(dag, sigma).edge_scanwidth() for sigma in extensions]
         best_sw = min(sw_values)
         best_sigma = extensions[sw_values.index(best_sw)]
-        return SolverResult(value=best_sw, extension=Extension(graph, best_sigma))
+        return SolverResult(value=best_sw, extension=Extension(dag, best_sigma))

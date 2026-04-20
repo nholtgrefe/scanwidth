@@ -167,7 +167,7 @@ class SimulatedAnnealingSolver(Solver):
             alpha = (stop_temp / init_temp) ** (1 / (self.max_iter - 1))
             temp = alpha * temp
 
-        best_tree_extension = TreeExtension(graph, best_tree)
+        best_tree_extension = TreeExtension(dag, best_tree)
         best_extension = best_tree_extension.to_extension()
         return SolverResult(
             value=best_sw, extension=best_extension, history=vals,

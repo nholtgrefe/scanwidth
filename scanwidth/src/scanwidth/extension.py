@@ -5,6 +5,7 @@ from typing import Dict, List, Union
 
 import networkx as nx
 
+from scanwidth.dag import DAG
 from scanwidth.tree_extension import TreeExtension
 
 
@@ -13,25 +14,29 @@ class Extension:
     
     def __init__(
         self, 
-        graph: nx.DiGraph, 
+        dag: DAG, 
         sigma: Union[List, str]
     ) -> None:
         """Initialize an Extension object.
         
         Parameters
         ----------
-        graph : nx.DiGraph
-            The corresponding graph as a NetworkX DiGraph.
+        dag : DAG
+            The corresponding DAG wrapper object.
         sigma : Union[List, str]
             A list of nodes for the extension, or a path to a text file
             containing the extension (one vertex per line).
 
         Raises
         ------
+        TypeError
+            If ``dag`` is not a :class:`DAG`.
         ValueError
-            If ``sigma`` is not a valid extension of ``graph``.
+            If ``sigma`` is not a valid extension of ``dag``.
         """
-        self._graph = graph
+        if not isinstance(dag, DAG):
+            raise TypeError("dag must be a DAG instance.")
+        self._graph = dag
         
         if isinstance(sigma, str):  # Initialize with sigma from textfile
             self._sigma: List = []
@@ -48,8 +53,8 @@ class Extension:
             raise ValueError("sigma is not a valid extension of graph.")
 
     @property
-    def graph(self) -> nx.DiGraph:
-        """Return the underlying graph."""
+    def graph(self) -> DAG:
+        """Return the underlying DAG object."""
         return self._graph
 
     @property
@@ -123,7 +128,7 @@ class Extension:
         
         left = self._sigma[0:i + 1]
         
-        sub = self._graph.subgraph(left)
+        sub = self._graph.graph.subgraph(left)
         components = [comp for comp in nx.weakly_connected_components(sub)]
         connected_vertices = set()
         for comp in components:
@@ -133,7 +138,7 @@ class Extension:
                 
         SW_i = 0
         for w in connected_vertices:
-            SW_i = SW_i + self._graph.in_degree(w) - self._graph.out_degree(w)
+            SW_i = SW_i + self._graph.graph.in_degree(w) - self._graph.graph.out_degree(w)
         
         return SW_i
     
@@ -148,12 +153,12 @@ class Extension:
         # Initialize
         Gamma = nx.DiGraph()
         sig = self._sigma.copy()
-        rho: Dict = {node: None for node in self._graph.nodes()}
+        rho: Dict = {node: None for node in self._graph.graph.nodes()}
         
         while len(sig) > 0:
             v = sig[0]
             sig.remove(v)
-            C = list(self._graph.successors(v))
+            C = list(self._graph.graph.successors(v))
             Gamma.add_node(v)
             rho[v] = v
             
@@ -178,14 +183,14 @@ class Extension:
             True if sigma is a valid extension, False otherwise.
         """
         seen = []
-        if len(self._sigma) != len(self._graph.nodes()):
+        if len(self._sigma) != len(self._graph.graph.nodes()):
             return False
-        if set(self._sigma) != set(self._graph.nodes()):
+        if set(self._sigma) != set(self._graph.graph.nodes()):
             return False
 
         for i in range(len(self._sigma)):
             v = self._sigma[i]
-            succ = list(self._graph.successors(v))
+            succ = list(self._graph.graph.successors(v))
             for w in succ:
                 if w not in seen:
                     return False

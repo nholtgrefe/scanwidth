@@ -50,7 +50,7 @@ class Reducer:
             partial_sigma = [v for v in partial_sigma if v not in sigma]
             sigma = partial_sigma + sigma
 
-        extension = Extension(graph, sigma)
+        extension = Extension(dag, sigma)
         return SolverResult(value=sw, extension=extension)
 
     @staticmethod

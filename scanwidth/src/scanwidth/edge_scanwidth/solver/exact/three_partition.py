@@ -46,7 +46,7 @@ class ThreePartitionSolver(Solver):
         sw, sigma = self._partial_scanwidth(
             graph, set(), set(graph.nodes()), set(), infinity,
         )
-        return SolverResult(value=sw, extension=Extension(graph, sigma))
+        return SolverResult(value=sw, extension=Extension(dag, sigma))
 
     def _partial_scanwidth(
         self,

@@ -43,7 +43,7 @@ class TwoPartitionSolver(Solver):
             k=infinity,
             infinity=infinity,
         )
-        return SolverResult(value=sw, extension=Extension(graph, sigma))
+        return SolverResult(value=sw, extension=Extension(dag, sigma))
 
     def _restricted_partial_scanwidth(
         self,

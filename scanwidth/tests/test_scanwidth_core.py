@@ -57,7 +57,7 @@ def _build_star_to_sink(k: int) -> nx.DiGraph:
 def test_extension_scanwidth_known_value() -> None:
     """Extension scanwidth matches known value on a small DAG."""
     graph = _build_two_to_one()
-    extension = Extension(graph=graph, sigma=[3, 1, 2])
+    extension = Extension(dag=DAG(graph), sigma=[3, 1, 2])
 
     assert extension.edge_scanwidth_at_vertex_i(0) == 2
     assert extension.edge_scanwidth() == 2
@@ -66,7 +66,7 @@ def test_extension_scanwidth_known_value() -> None:
 def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
     """Canonical tree extension preserves scanwidth and validity."""
     graph = _build_two_to_one()
-    extension = Extension(graph=graph, sigma=[3, 1, 2])
+    extension = Extension(dag=DAG(graph), sigma=[3, 1, 2])
 
     tree_extension = extension.canonical_tree_extension()
     roundtrip_extension = tree_extension.to_extension()
@@ -201,9 +201,19 @@ def test_extension_init_rejects_invalid_extension() -> None:
     graph = _build_chain()
 
     try:
-        _ = Extension(graph=graph, sigma=[1, 2, 3])
+        _ = Extension(dag=DAG(graph), sigma=[1, 2, 3])
         assert False, "Expected ValueError for invalid extension ordering."
     except ValueError:
+        pass
+
+
+def test_extension_init_requires_dag_wrapper() -> None:
+    """Extension initialization requires a DAG wrapper as graph input."""
+    graph = _build_chain()
+    try:
+        _ = Extension(dag=graph, sigma=[3, 2, 1])  # type: ignore[arg-type]
+        assert False, "Expected TypeError when graph is not a DAG instance."
+    except TypeError:
         pass
 
 
@@ -213,7 +223,18 @@ def test_tree_extension_init_rejects_invalid_tree() -> None:
     invalid_tree = nx.DiGraph([(1, 2), (1, 3)])
 
     try:
-        _ = TreeExtension(graph, invalid_tree)
+        _ = TreeExtension(dag=DAG(graph), tree=invalid_tree)
         assert False, "Expected ValueError for invalid tree extension."
     except ValueError:
+        pass
+
+
+def test_tree_extension_init_requires_dag_wrapper() -> None:
+    """TreeExtension initialization requires a DAG wrapper as graph input."""
+    graph = _build_chain()
+    tree = nx.DiGraph([(1, 2), (2, 3)])
+    try:
+        _ = TreeExtension(dag=graph, tree=tree)  # type: ignore[arg-type]
+        assert False, "Expected TypeError when graph is not a DAG instance."
+    except TypeError:
         pass
