@@ -9,6 +9,8 @@ from __future__ import annotations
 import networkx as nx
 
 from scanwidth import DAG, Extension
+from scanwidth.edge_scanwidth import edge_scanwidth
+from scanwidth.tree_extension import TreeExtension
 
 
 def _build_chain() -> nx.DiGraph:
@@ -57,9 +59,8 @@ def test_extension_scanwidth_known_value() -> None:
     graph = _build_two_to_one()
     extension = Extension(graph=graph, sigma=[3, 1, 2])
 
-    assert extension.is_extension()
-    assert extension.scanwidth_at_vertex_i(0) == 2
-    assert extension.scanwidth() == 2
+    assert extension.edge_scanwidth_at_vertex_i(0) == 2
+    assert extension.edge_scanwidth() == 2
 
 
 def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
@@ -71,47 +72,50 @@ def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
     roundtrip_extension = tree_extension.to_extension()
 
     assert tree_extension.is_canonical()
-    assert tree_extension.scanwidth() == extension.scanwidth()
-    assert roundtrip_extension.is_extension()
-    assert roundtrip_extension.scanwidth() == extension.scanwidth()
+    assert tree_extension.edge_scanwidth() == extension.edge_scanwidth()
+    assert roundtrip_extension.edge_scanwidth() == extension.edge_scanwidth()
 
 
-def test_exact_methods_match_known_chain_scanwidth() -> None:
-    """Exact methods compute scanwidth 1 on a directed chain."""
+def test_exact_functions_match_known_chain_scanwidth() -> None:
+    """All exact solvers compute scanwidth 1 on a directed chain."""
     dag = DAG(_build_chain())
 
-    sw_exhaustive, ext_exhaustive = dag.optimal_scanwidth(reduced=False, method=1)
-    sw_xp, ext_xp = dag.optimal_scanwidth(reduced=False, method=5)
+    sw_exhaustive, ext_exhaustive = edge_scanwidth(
+        dag, algorithm="exhaustive", reduce=False,
+    )
+    sw_two_partition, ext_two_partition = edge_scanwidth(
+        dag, algorithm="two_partition", reduce=False,
+    )
+    sw_partition, ext_partition = edge_scanwidth(
+        dag, algorithm="three_partition", reduce=False,
+    )
+    sw_xp, ext_xp = edge_scanwidth(dag, algorithm="xp", reduce=False)
 
-    assert ext_exhaustive is not None
-    assert ext_xp is not None
-    assert sw_exhaustive == 1
-    assert sw_xp == 1
-    assert ext_exhaustive.scanwidth() == sw_exhaustive
-    assert ext_xp.scanwidth() == sw_xp
-    assert ext_exhaustive.is_extension()
-    assert ext_xp.is_extension()
+    assert sw_exhaustive == sw_two_partition == sw_partition == sw_xp == 1
+    assert ext_exhaustive.edge_scanwidth() == 1
+    assert ext_two_partition.edge_scanwidth() == 1
+    assert ext_partition.edge_scanwidth() == 1
+    assert ext_xp.edge_scanwidth() == 1
 
 
 def test_heuristics_return_valid_extensions_and_consistent_scanwidth() -> None:
     """Heuristics return consistent scanwidth values and valid extensions."""
     dag = DAG(_build_chain())
 
-    sw_greedy, ext_greedy = dag.greedy_heuristic(reduced=False)
-    sw_cut, ext_cut = dag.cut_splitting_heuristic(reduced=False)
-    sw_anneal, ext_anneal, _vals = dag.simulated_annealing(
+    sw_greedy, ext_greedy = edge_scanwidth(dag, algorithm="greedy", reduce=False)
+    sw_cut, ext_cut = edge_scanwidth(dag, algorithm="cut_splitting", reduce=False)
+    sw_anneal, ext_anneal = edge_scanwidth(
+        dag,
+        algorithm="simulated_annealing",
         max_iter=5,
         verbose=False,
-        reduced=False,
+        reduce=False,
         seed=7,
     )
 
-    assert sw_greedy == ext_greedy.scanwidth()
-    assert sw_cut == ext_cut.scanwidth()
-    assert sw_anneal == ext_anneal.scanwidth()
-    assert ext_greedy.is_extension()
-    assert ext_cut.is_extension()
-    assert ext_anneal.is_extension()
+    assert sw_greedy == ext_greedy.edge_scanwidth()
+    assert sw_cut == ext_cut.edge_scanwidth()
+    assert sw_anneal == ext_anneal.edge_scanwidth()
 
 
 def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:
@@ -123,12 +127,11 @@ def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:
         Expected optimal scanwidth of the generated DAG.
     """
     dag = DAG(_build_star_to_sink(expected_scanwidth))
-    sw, ext = dag.optimal_scanwidth(reduced=False, method=1)
+    sw, ext = edge_scanwidth(dag, algorithm="exhaustive", reduce=False)
 
     assert ext is not None
     assert sw == expected_scanwidth
-    assert ext.scanwidth() == expected_scanwidth
-    assert ext.is_extension()
+    assert ext.edge_scanwidth() == expected_scanwidth
 
 
 def test_star_to_sink_scanwidth_3() -> None:
@@ -139,3 +142,78 @@ def test_star_to_sink_scanwidth_3() -> None:
 def test_star_to_sink_scanwidth_4() -> None:
     """Exact algorithm returns scanwidth 4 for the 4-star DAG."""
     _assert_star_to_sink_scanwidth(4)
+
+
+def test_edge_scanwidth_entrypoint_xp() -> None:
+    """Main entry point computes expected value for XP on a chain."""
+    dag = DAG(_build_chain())
+    sw, ext = edge_scanwidth(dag, algorithm="xp", reduce=False)
+
+    assert sw == 1
+    assert ext.edge_scanwidth() == 1
+
+
+def test_edge_scanwidth_entrypoint_xp_rejects_fixed_k() -> None:
+    """Public XP entrypoint rejects fixed-k mode."""
+    dag = DAG(_build_chain())
+    try:
+        _ = edge_scanwidth(dag, algorithm="xp", k=1, reduce=False)
+        assert False, "Expected ValueError when passing k to public xp API."
+    except ValueError:
+        pass
+
+
+def test_edge_scanwidth_reduce_matches_no_reduce() -> None:
+    """Reduced and unreduced XP produce identical scanwidth on a star DAG."""
+    dag = DAG(_build_star_to_sink(4))
+
+    sw_reduced, ext_reduced = edge_scanwidth(
+        dag, algorithm="xp", reduce=True,
+    )
+    sw_direct, ext_direct = edge_scanwidth(
+        dag, algorithm="xp", reduce=False,
+    )
+
+    assert sw_reduced == sw_direct == 4
+
+
+def test_edge_scanwidth_reduce_greedy_on_chain() -> None:
+    """Greedy with s-block reduction returns a valid extension."""
+    dag = DAG(_build_chain())
+    sw, ext = edge_scanwidth(dag, algorithm="greedy", reduce=True)
+
+    assert sw == ext.edge_scanwidth()
+
+
+def test_dag_init_rejects_cyclic_graph() -> None:
+    """DAG initialization rejects directed cyclic graphs."""
+    cyclic = nx.DiGraph([(1, 2), (2, 1)])
+
+    try:
+        _ = DAG(cyclic)
+        assert False, "Expected ValueError for cyclic directed graph."
+    except ValueError:
+        pass
+
+
+def test_extension_init_rejects_invalid_extension() -> None:
+    """Extension initialization rejects invalid node ordering."""
+    graph = _build_chain()
+
+    try:
+        _ = Extension(graph=graph, sigma=[1, 2, 3])
+        assert False, "Expected ValueError for invalid extension ordering."
+    except ValueError:
+        pass
+
+
+def test_tree_extension_init_rejects_invalid_tree() -> None:
+    """TreeExtension initialization rejects invalid tree extensions."""
+    graph = _build_chain()
+    invalid_tree = nx.DiGraph([(1, 2), (1, 3)])
+
+    try:
+        _ = TreeExtension(graph, invalid_tree)
+        assert False, "Expected ValueError for invalid tree extension."
+    except ValueError:
+        pass

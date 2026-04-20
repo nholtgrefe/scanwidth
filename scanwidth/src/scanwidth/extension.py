@@ -25,19 +25,37 @@ class Extension:
         sigma : Union[List, str]
             A list of nodes for the extension, or a path to a text file
             containing the extension (one vertex per line).
+
+        Raises
+        ------
+        ValueError
+            If ``sigma`` is not a valid extension of ``graph``.
         """
-        self.graph = graph
+        self._graph = graph
         
         if isinstance(sigma, str):  # Initialize with sigma from textfile
-            self.sigma: List = []
+            self._sigma: List = []
             with open(sigma, 'r') as infile:
                 data = infile.readlines()
                 for i in data:
                     v = i.split()[0]
-                    self.sigma.append(v)
+                    self._sigma.append(v)
                             
         else:  # Initialize with given sigma
-            self.sigma = sigma
+            self._sigma = sigma
+
+        if not self._is_extension():
+            raise ValueError("sigma is not a valid extension of graph.")
+
+    @property
+    def graph(self) -> nx.DiGraph:
+        """Return the underlying graph."""
+        return self._graph
+
+    @property
+    def sigma(self) -> List:
+        """Return the extension order."""
+        return self._sigma.copy()
             
     def save_file(self, file_name: str) -> None:
         """Save the extension in a file.
@@ -58,11 +76,11 @@ class Extension:
             raise ValueError("File already exists.")
         
         with open(file_name, "w+") as f:
-            for v in self.sigma:
+            for v in self._sigma:
                 f.write(f"{v}\n")
         
-    def scanwidth(self) -> int:
-        """Calculate the scanwidth of the extension sigma for the DAG.
+    def edge_scanwidth(self) -> int:
+        """Calculate edge scanwidth of the extension sigma for the DAG.
         
         Returns
         -------
@@ -71,20 +89,20 @@ class Extension:
         """
         SW_i_list = []
         
-        for i in range(len(self.sigma)):
-            SW_i = self.scanwidth_at_vertex_i(i)
+        for i in range(len(self._sigma)):
+            SW_i = self.edge_scanwidth_at_vertex_i(i)
             SW_i_list.append(SW_i)
         
         return max(SW_i_list)
 
-    def scanwidth_at_vertex_i(
+    def edge_scanwidth_at_vertex_i(
         self, 
         i: int, 
         position: bool = True
     ) -> int:
-        """Calculate the size of the set SW of the extension sigma at position i.
+        """Calculate edge scanwidth at position (or vertex) ``i`` in sigma.
         
-        If position is False, we find the scanwidth at the vertex i
+        If position is False, we find edge scanwidth at the vertex i
         (i.e. the node-name).
         
         Parameters
@@ -98,29 +116,29 @@ class Extension:
         Returns
         -------
         int
-            The scanwidth at position/vertex i.
+            The edge scanwidth at position/vertex i.
         """
         if not position:
-            i = self.sigma.index(i)
+            i = self._sigma.index(i)
         
-        left = self.sigma[0:i + 1]
+        left = self._sigma[0:i + 1]
         
-        sub = self.graph.subgraph(left)
+        sub = self._graph.subgraph(left)
         components = [comp for comp in nx.weakly_connected_components(sub)]
         connected_vertices = set()
         for comp in components:
-            if self.sigma[i] in comp:
+            if self._sigma[i] in comp:
                 connected_vertices = comp
                 break
                 
         SW_i = 0
         for w in connected_vertices:
-            SW_i = SW_i + self.graph.in_degree(w) - self.graph.out_degree(w)
+            SW_i = SW_i + self._graph.in_degree(w) - self._graph.out_degree(w)
         
         return SW_i
     
     def canonical_tree_extension(self) -> TreeExtension:
-        """Create the canonical tree extension with the same scanwidth as sigma.
+        """Create canonical tree extension with same edge scanwidth as sigma.
         
         Returns
         -------
@@ -129,13 +147,13 @@ class Extension:
         """
         # Initialize
         Gamma = nx.DiGraph()
-        sig = self.sigma.copy()
-        rho: Dict = {node: None for node in self.graph.nodes()}
+        sig = self._sigma.copy()
+        rho: Dict = {node: None for node in self._graph.nodes()}
         
         while len(sig) > 0:
             v = sig[0]
             sig.remove(v)
-            C = list(self.graph.successors(v))
+            C = list(self._graph.successors(v))
             Gamma.add_node(v)
             rho[v] = v
             
@@ -147,11 +165,11 @@ class Extension:
                     if rho[u] in R:
                         rho[u] = v
         
-        tree = TreeExtension(self.graph, Gamma)
+        tree = TreeExtension(self._graph, Gamma)
         
         return tree
     
-    def is_extension(self) -> bool:
+    def _is_extension(self) -> bool:
         """Check if sigma is indeed an extension of the graph.
         
         Returns
@@ -160,11 +178,17 @@ class Extension:
             True if sigma is a valid extension, False otherwise.
         """
         seen = []
-        for i in range(len(self.sigma)):
-            v = self.sigma[i]
-            succ = list(self.graph.successors(v))
+        if len(self._sigma) != len(self._graph.nodes()):
+            return False
+        if set(self._sigma) != set(self._graph.nodes()):
+            return False
+
+        for i in range(len(self._sigma)):
+            v = self._sigma[i]
+            succ = list(self._graph.successors(v))
             for w in succ:
                 if w not in seen:
                     return False
             seen.append(v)
         return True
+

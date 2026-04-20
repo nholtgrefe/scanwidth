@@ -11,16 +11,23 @@ pip install scanwidth
 ## Quick Start
 
 ```python
-from scanwidth import DAG, Extension, TreeExtension
+import networkx as nx
+from scanwidth import DAG
+from scanwidth.edge_scanwidth import edge_scanwidth
 
-# Load a DAG from a file
-dag = DAG("path/to/graph.el")
+# Load a DAG from a file with NetworkX
+graph = nx.read_edgelist(
+    "path/to/graph.el",
+    create_using=nx.DiGraph,
+    nodetype=str,
+)
+dag = DAG(graph)
 
 # Compute scanwidth using various algorithms
-sw, extension = dag.optimal_scanwidth()        # Exact algorithm
-sw, extension = dag.greedy_heuristic()        # Greedy heuristic
-sw, extension = dag.cut_splitting_heuristic()  # Cut-splitting heuristic
-sw, extension = dag.simulated_annealing()      # Simulated annealing
+sw, extension = edge_scanwidth(dag, algorithm="xp")                   # Exact XP algorithm
+sw, extension = edge_scanwidth(dag, algorithm="greedy")               # Greedy heuristic
+sw, extension = edge_scanwidth(dag, algorithm="cut_splitting")        # Cut-splitting heuristic
+sw, extension = edge_scanwidth(dag, algorithm="simulated_annealing")  # Simulated annealing
 
 # Save the extension
 extension.save_file("output.txt")
@@ -28,14 +35,17 @@ extension.save_file("output.txt")
 
 ## Algorithms
 
-The package provides several algorithms for computing scanwidth:
+The package provides several algorithms for computing edge scanwidth:
 
-- **`optimal_scanwidth()`** - Exact algorithm using dynamic programming
-- **`greedy_heuristic()`** - Fast greedy heuristic
-- **`cut_splitting_heuristic()`** - Cut-splitting heuristic
-- **`simulated_annealing()`** - Simulated annealing metaheuristic
+- **`edge_scanwidth(..., algorithm="xp")`** - Exact algorithm using dynamic programming
+- **`edge_scanwidth(..., algorithm="greedy")`** - Fast greedy heuristic
+- **`edge_scanwidth(..., algorithm="cut_splitting")`** - Cut-splitting heuristic
+- **`edge_scanwidth(..., algorithm="simulated_annealing")`** - Simulated annealing metaheuristic
+- **`edge_scanwidth(..., algorithm="random")`** - Random extension baseline
 
-All methods return a tuple `(scanwidth_value, extension_object)`. For specific parameter settings and detailed documentation, refer to the source code.
+The main entry function returns `(scanwidth_value, extension_object)` for all
+algorithms. For specific parameter settings and detailed documentation, refer to
+the source code.
 
 ## Citation
 

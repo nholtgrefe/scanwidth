@@ -1,9 +1,8 @@
 """TreeExtension class for tree extensions of graphs."""
 
-from typing import Dict, Optional, Set, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import networkx as nx
-import numpy as np
 
 if TYPE_CHECKING:
     from scanwidth.extension import Extension
@@ -25,12 +24,29 @@ class TreeExtension:
             The corresponding graph as a NetworkX DiGraph.
         tree : nx.DiGraph
             The tree extension as a NetworkX DiGraph.
+
+        Raises
+        ------
+        ValueError
+            If ``tree`` is not a valid tree extension of ``graph``.
         """
-        self.graph = graph
-        self.tree = tree
+        self._graph = graph
+        self._tree = tree
+        if not self._is_tree_extension():
+            raise ValueError("tree is not a valid tree extension of graph.")
+
+    @property
+    def graph(self) -> nx.DiGraph:
+        """Return the underlying graph."""
+        return self._graph
+
+    @property
+    def tree(self) -> nx.DiGraph:
+        """Return the tree extension graph."""
+        return self._tree
     
-    def scanwidth(self) -> int:
-        """Calculate the scanwidth of the tree extension for the DAG.
+    def edge_scanwidth(self) -> int:
+        """Calculate the edge scanwidth of the tree extension for the DAG.
         
         Returns
         -------
@@ -40,13 +56,13 @@ class TreeExtension:
         GW_v_list = []
         
         for v in self.tree.nodes():
-            GW_v = self.scanwidth_at_vertex(v)
+            GW_v = self.edge_scanwidth_at_vertex(v)
             GW_v_list.append(GW_v)
         
         return max(GW_v_list)
 
-    def scanwidth_at_vertex(self, v) -> int:
-        """Calculate the scanwidth of the tree extension at vertex v.
+    def edge_scanwidth_at_vertex(self, v) -> int:
+        """Calculate edge scanwidth of the tree extension at vertex ``v``.
         
         Parameters
         ----------
@@ -97,121 +113,37 @@ class TreeExtension:
                 return False
             
         return True
-    
-    def _random_neighbour_scanwidth(
-        self, 
-        sw_values: Dict, 
-        rng: np.random.RandomState
-    ) -> Optional[Tuple[Dict, object, object, Set]]:
-        """Find the scanwidth of a random neighbour of the tree extension.
-        
-        Takes as input a dictionary of the scanwidth values of the current tree
-        and a random number generator rng. Returns a dictionary of new
-        scanwidth-values, the two vertices that are swapped and a set of vertices
-        that are connected to the parent in the graph G[1..parent].
-        
-        Parameters
-        ----------
-        sw_values : Dict
-            Dictionary of scanwidth values for the current tree.
-        rng : np.random.RandomState
-            Random number generator.
-        
-        Returns
-        -------
-        Optional[Tuple[Dict, object, object, Set]]
-            A tuple containing new scanwidth values dictionary, vertex, parent,
-            and connected_vertices set. Returns None if no valid neighbour exists.
-        """
-        # Choose random vertex
-        possible_choices = []
-        for v in self.graph.nodes:
-            pred = list(self.tree.predecessors(v))
-            if len(pred) == 0:  # v is the root and we can not move the root up
-                continue
-            elif (pred[0], v) in self.graph.edges:  # If an edge from pred to vertex, we can not swap them
-                continue
-            else:
-                possible_choices.append(v)
-                
-        if len(possible_choices) == 0:
-            return None
-        
-        # Vertex to be swapped above
-        vertex = rng.choice(possible_choices)
-        parent = list(self.tree.predecessors(vertex))[0]
-        
-        # Calculate the new sw_values (only parent and vertex change)
-        new_sw_values = sw_values.copy()
-        
-        # New value for vertex
-        new_sw_values[vertex] = sw_values[parent]
-        
-        # New value for parent
-        desc = list(nx.descendants(self.tree, parent))
-        desc.remove(vertex)
-        desc.append(parent)
-        
-        connected_vertices = {parent}
-        for child in self.tree.successors(parent):
-            if child != vertex:
-                connected_vertices = (
-                    connected_vertices | nx.descendants(self.tree, child) | {child}
-                )
-        for child in self.tree.successors(vertex):
-            sinkset = nx.descendants(self.tree, child) | {child}
-            connected = False
-            
-            for u in sinkset:
-                if (parent, u) in self.graph.edges():
-                    connected = True
-                    break
-            
-            if connected:
-                connected_vertices = (
-                    connected_vertices | nx.descendants(self.tree, child) | {child}
-                )
 
-        new_sw_values[parent] = self._delta_in(connected_vertices)
-        
-        return new_sw_values, vertex, parent, connected_vertices
-        
-    def _delta_in(
-        self, 
-        vertex_set: Set, 
-        sink: bool = True
-    ) -> int:
-        """Return the indegree of vertex_set.
-        
-        Setting sink to True, if we already know that it is a sinkset
-        will speed up computation.
-        
-        Parameters
-        ----------
-        vertex_set : Set
-            Set of vertices to compute indegree for.
-        sink : bool, optional
-            If True, assumes vertex_set is a sinkset for optimization.
-            Default is True.
-        
-        Returns
-        -------
-        int
-            The indegree of the vertex set.
-        """
-        res = 0
-        if sink:
-            if len(vertex_set) < len(self.graph.nodes()) / 2:  # Return indegree of W
-                for v in vertex_set:
-                    res = res + self.graph.in_degree(v) - self.graph.out_degree(v)
-            else:  # Return outdegree of V / W
-                for v in self.graph.nodes:
-                    if v not in vertex_set:
-                        res = res - self.graph.in_degree(v) + self.graph.out_degree(v)
-            
-        if not sink:  # If no sinkset
-            for (u, v) in self.graph.edges():
-                if u not in vertex_set and v in vertex_set:
-                    res = res + 1            
-            
-        return res
+    def _is_tree_extension(self) -> bool:
+        """Return whether ``self.tree`` is a valid tree extension of ``graph``."""
+        graph_nodes = set(self.graph.nodes())
+        tree_nodes = set(self.tree.nodes())
+        if graph_nodes != tree_nodes:
+            return False
+
+        if len(tree_nodes) == 0:
+            return True
+
+        if not nx.is_directed_acyclic_graph(self.tree):
+            return False
+        if self.tree.number_of_edges() != len(tree_nodes) - 1:
+            return False
+        if not nx.is_weakly_connected(self.tree):
+            return False
+
+        roots = [v for v in self.tree.nodes() if self.tree.in_degree(v) == 0]
+        if len(roots) != 1:
+            return False
+        for v in self.tree.nodes():
+            indeg = self.tree.in_degree(v)
+            if v == roots[0]:
+                if indeg != 0:
+                    return False
+            elif indeg != 1:
+                return False
+
+        for (u, v) in self.graph.edges():
+            if not nx.has_path(self.tree, u, v):
+                return False
+        return True
+    
