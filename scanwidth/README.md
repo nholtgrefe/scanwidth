@@ -28,9 +28,6 @@ sw, extension = edge_scanwidth(dag, algorithm="xp")                   # Exact XP
 sw, extension = edge_scanwidth(dag, algorithm="greedy")               # Greedy heuristic
 sw, extension = edge_scanwidth(dag, algorithm="cut_splitting")        # Cut-splitting heuristic
 sw, extension = edge_scanwidth(dag, algorithm="simulated_annealing")  # Simulated annealing
-
-# Save the extension
-extension.save_file("output.txt")
 ```
 
 ## Algorithms

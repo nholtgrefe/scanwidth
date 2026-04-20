@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import networkx as nx
 
-from scanwidth import DAG, Extension
-from scanwidth.edge_scanwidth import edge_scanwidth
-from scanwidth.tree_extension import TreeExtension
+from scanwidth import DAG, Extension, edge_scanwidth, TreeExtension
 
 
 def _build_chain() -> nx.DiGraph:
@@ -57,16 +55,16 @@ def _build_star_to_sink(k: int) -> nx.DiGraph:
 def test_extension_scanwidth_known_value() -> None:
     """Extension scanwidth matches known value on a small DAG."""
     graph = _build_two_to_one()
-    extension = Extension(dag=DAG(graph), sigma=[3, 1, 2])
+    extension = Extension(dag=DAG(graph), ordering=[3, 1, 2])
 
-    assert extension.edge_scanwidth_at_vertex_i(0) == 2
+    assert len(extension.edge_scanwidth_bag(3)) == 2
     assert extension.edge_scanwidth() == 2
 
 
 def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
     """Canonical tree extension preserves scanwidth and validity."""
     graph = _build_two_to_one()
-    extension = Extension(dag=DAG(graph), sigma=[3, 1, 2])
+    extension = Extension(dag=DAG(graph), ordering=[3, 1, 2])
 
     tree_extension = extension.canonical_tree_extension()
     roundtrip_extension = tree_extension.to_extension()
@@ -74,6 +72,49 @@ def test_tree_extension_roundtrip_preserves_scanwidth() -> None:
     assert tree_extension.is_canonical()
     assert tree_extension.edge_scanwidth() == extension.edge_scanwidth()
     assert roundtrip_extension.edge_scanwidth() == extension.edge_scanwidth()
+
+
+def test_tree_extension_edge_scanwidth_bag_properties() -> None:
+    """Each edge bag contains exactly incoming boundary edges."""
+    graph = _build_two_to_one()
+    tree_extension = Extension(
+        dag=DAG(graph), ordering=[3, 1, 2],
+    ).canonical_tree_extension()
+
+    for vertex in tree_extension.tree.nodes():
+        bag = tree_extension.edge_scanwidth_bag(vertex)
+        left = nx.descendants(tree_extension.tree, vertex) | {vertex}
+        expected = {
+            (u, w) for (u, w) in tree_extension.dag.graph.edges()
+            if u not in left and w in left
+        }
+        assert bag == expected
+        assert len(bag) <= tree_extension.edge_scanwidth()
+
+
+def test_tree_extension_edge_scanwidth_bag_rejects_unknown_vertex() -> None:
+    """Bag query fails for vertices outside the tree extension."""
+    graph = _build_two_to_one()
+    tree_extension = Extension(
+        dag=DAG(graph), ordering=[3, 1, 2],
+    ).canonical_tree_extension()
+
+    try:
+        _ = tree_extension.edge_scanwidth_bag("missing")
+        assert False, "Expected ValueError for unknown tree vertex."
+    except ValueError:
+        pass
+
+
+def test_extension_edge_scanwidth_bag_rejects_unknown_vertex() -> None:
+    """Bag query fails for vertices outside the extension order."""
+    extension = Extension(dag=DAG(_build_two_to_one()), ordering=[3, 1, 2])
+
+    try:
+        _ = extension.edge_scanwidth_bag("missing")
+        assert False, "Expected ValueError for unknown extension vertex."
+    except ValueError:
+        pass
 
 
 def test_exact_functions_match_known_chain_scanwidth() -> None:
@@ -201,7 +242,7 @@ def test_extension_init_rejects_invalid_extension() -> None:
     graph = _build_chain()
 
     try:
-        _ = Extension(dag=DAG(graph), sigma=[1, 2, 3])
+        _ = Extension(dag=DAG(graph), ordering=[1, 2, 3])
         assert False, "Expected ValueError for invalid extension ordering."
     except ValueError:
         pass
@@ -211,8 +252,18 @@ def test_extension_init_requires_dag_wrapper() -> None:
     """Extension initialization requires a DAG wrapper as graph input."""
     graph = _build_chain()
     try:
-        _ = Extension(dag=graph, sigma=[3, 2, 1])  # type: ignore[arg-type]
+        _ = Extension(dag=graph, ordering=[3, 2, 1])  # type: ignore[arg-type]
         assert False, "Expected TypeError when graph is not a DAG instance."
+    except TypeError:
+        pass
+
+
+def test_extension_init_requires_ordering_list() -> None:
+    """Extension initialization requires ordering to be a list."""
+    graph = _build_chain()
+    try:
+        _ = Extension(dag=DAG(graph), ordering="3 2 1")  # type: ignore[arg-type]
+        assert False, "Expected TypeError when ordering is not a list."
     except TypeError:
         pass
 

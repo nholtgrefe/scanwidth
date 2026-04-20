@@ -36,15 +36,15 @@ class TreeExtension:
         """
         if not isinstance(dag, DAG):
             raise TypeError("dag must be a DAG instance.")
-        self._graph = dag
+        self._dag = dag
         self._tree = tree
-        if not self._is_tree_extension():
+        if not self._is_valid():
             raise ValueError("tree is not a valid tree extension of graph.")
 
     @property
-    def graph(self) -> DAG:
+    def dag(self) -> DAG:
         """Return the underlying DAG object."""
-        return self._graph
+        return self._dag
 
     @property
     def tree(self) -> nx.DiGraph:
@@ -59,39 +59,37 @@ class TreeExtension:
         int
             The scanwidth value.
         """
-        GW_v_list = []
-        
-        for v in self.tree.nodes():
-            GW_v = self.edge_scanwidth_at_vertex(v)
-            GW_v_list.append(GW_v)
-        
-        return max(GW_v_list)
 
-    def edge_scanwidth_at_vertex(self, v) -> int:
-        """Calculate edge scanwidth of the tree extension at vertex ``v``.
+        return max(len(self.edge_scanwidth_bag(v)) for v in self.tree.nodes())
+
+    def edge_scanwidth_bag(self, vertex: object) -> set:
+        """Return the set of edges in the edge scanwidth bag for a tree vertex.
         
         Parameters
         ----------
-        v
-            The vertex to compute scanwidth at.
+        vertex : object
+            Vertex of the tree extension.
         
         Returns
         -------
-        int
-            The scanwidth at vertex v.
+        set
+            Set of edges in ``GW_v``.
+
+        Raises
+        ------
+        ValueError
+            If ``vertex`` is not a vertex of ``self.tree``.
         """
-        left = nx.descendants(self.tree, v)
-        left.add(v)
-        
-        GW_v = 0
-        for w in left:
-            GW_v = (
-                GW_v
-                + self.graph.graph.in_degree(w)
-                - self.graph.graph.out_degree(w)
-            )
-            
-        return GW_v
+        if vertex not in self.tree.nodes:
+            raise ValueError("vertex must be a node of the tree extension.")
+
+        left = nx.descendants(self.tree, vertex)
+        left.add(vertex)
+        return {
+            (u, w)
+            for (u, w) in self.dag.graph.edges()
+            if u not in left and w in left
+        }
     
     def to_extension(self) -> 'Extension':
         """Return an extension of the tree.
@@ -106,7 +104,7 @@ class TreeExtension:
         from scanwidth.extension import Extension
         
         sigma = list(reversed(list(nx.topological_sort(self.tree))))
-        return Extension(self.graph, sigma)
+        return Extension(self.dag, sigma)
     
     def is_canonical(self) -> bool:
         """Report whether the tree extension is canonical.
@@ -119,14 +117,14 @@ class TreeExtension:
         for v in self.tree.nodes():
             left = nx.descendants(self.tree, v)
             left.add(v)
-            if not nx.is_weakly_connected(self.graph.graph.subgraph(left)):
+            if not nx.is_weakly_connected(self.dag.graph.subgraph(left)):
                 return False
             
         return True
 
-    def _is_tree_extension(self) -> bool:
+    def _is_valid(self) -> bool:
         """Return whether ``self.tree`` is a valid tree extension of ``graph``."""
-        graph_nodes = set(self.graph.graph.nodes())
+        graph_nodes = set(self.dag.graph.nodes())
         tree_nodes = set(self.tree.nodes())
         if graph_nodes != tree_nodes:
             return False
@@ -152,7 +150,7 @@ class TreeExtension:
             elif indeg != 1:
                 return False
 
-        for (u, v) in self.graph.graph.edges():
+        for (u, v) in self.dag.graph.edges():
             if not nx.has_path(self.tree, u, v):
                 return False
         return True

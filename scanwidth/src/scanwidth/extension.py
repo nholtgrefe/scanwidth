@@ -1,7 +1,6 @@
 """Extension class for extensions of graphs."""
 
-import os
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import networkx as nx
 
@@ -15,7 +14,7 @@ class Extension:
     def __init__(
         self, 
         dag: DAG, 
-        sigma: Union[List, str]
+        ordering: List
     ) -> None:
         """Initialize an Extension object.
         
@@ -23,127 +22,88 @@ class Extension:
         ----------
         dag : DAG
             The corresponding DAG wrapper object.
-        sigma : Union[List, str]
-            A list of nodes for the extension, or a path to a text file
-            containing the extension (one vertex per line).
+        ordering : List
+            List of nodes representing the extension order.
 
         Raises
         ------
         TypeError
             If ``dag`` is not a :class:`DAG`.
+        TypeError
+            If ``ordering`` is not a list.
         ValueError
-            If ``sigma`` is not a valid extension of ``dag``.
+            If ``ordering`` is not a valid extension of ``dag``.
         """
         if not isinstance(dag, DAG):
             raise TypeError("dag must be a DAG instance.")
-        self._graph = dag
-        
-        if isinstance(sigma, str):  # Initialize with sigma from textfile
-            self._sigma: List = []
-            with open(sigma, 'r') as infile:
-                data = infile.readlines()
-                for i in data:
-                    v = i.split()[0]
-                    self._sigma.append(v)
-                            
-        else:  # Initialize with given sigma
-            self._sigma = sigma
+        if not isinstance(ordering, list):
+            raise TypeError("ordering must be a list.")
+        self._dag = dag
+        self._ordering = ordering
 
-        if not self._is_extension():
-            raise ValueError("sigma is not a valid extension of graph.")
+        if not self._is_valid():
+            raise ValueError("ordering is not a valid extension of graph.")
 
     @property
-    def graph(self) -> DAG:
+    def dag(self) -> DAG:
         """Return the underlying DAG object."""
-        return self._graph
+        return self._dag
 
     @property
-    def sigma(self) -> List:
+    def ordering(self) -> List:
         """Return the extension order."""
-        return self._sigma.copy()
+        return self._ordering.copy()
             
-    def save_file(self, file_name: str) -> None:
-        """Save the extension in a file.
-        
-        Each line contains one vertex of the extension.
-        
-        Parameters
-        ----------
-        file_name : str
-            Path where the file should be saved.
-        
-        Raises
-        ------
-        ValueError
-            If the file already exists.
-        """
-        if os.path.exists(file_name):
-            raise ValueError("File already exists.")
-        
-        with open(file_name, "w+") as f:
-            for v in self._sigma:
-                f.write(f"{v}\n")
-        
     def edge_scanwidth(self) -> int:
-        """Calculate edge scanwidth of the extension sigma for the DAG.
+        """Calculate edge scanwidth of the extension ordering for the DAG.
         
         Returns
         -------
         int
             The scanwidth value.
         """
-        SW_i_list = []
-        
-        for i in range(len(self._sigma)):
-            SW_i = self.edge_scanwidth_at_vertex_i(i)
-            SW_i_list.append(SW_i)
-        
-        return max(SW_i_list)
+        return max(len(self.edge_scanwidth_bag(v)) for v in self._ordering)
 
-    def edge_scanwidth_at_vertex_i(
-        self, 
-        i: int, 
-        position: bool = True
-    ) -> int:
-        """Calculate edge scanwidth at position (or vertex) ``i`` in sigma.
-        
-        If position is False, we find edge scanwidth at the vertex i
-        (i.e. the node-name).
-        
+    def edge_scanwidth_bag(self, vertex: object) -> set:
+        """Return the set of edges in the edge scanwidth bag for a vertex.
+
         Parameters
         ----------
-        i : int
-            Position index or vertex name (if position=False).
-        position : bool, optional
-            If True, i is treated as a position index. If False, i is
-            treated as a vertex name. Default is True.
-        
+        vertex : object
+            Vertex in the extension order ``ordering``.
+
         Returns
         -------
-        int
-            The edge scanwidth at position/vertex i.
+        set
+            Set of edges in ``SW_v``.
+
+        Raises
+        ------
+        ValueError
+            If ``vertex`` is not in the extension order.
         """
-        if not position:
-            i = self._sigma.index(i)
-        
-        left = self._sigma[0:i + 1]
-        
-        sub = self._graph.graph.subgraph(left)
+        if vertex not in self._ordering:
+            raise ValueError("vertex must be a node in the extension order.")
+
+        i = self._ordering.index(vertex)
+        left = self._ordering[0:i + 1]
+
+        sub = self._dag.graph.subgraph(left)
         components = [comp for comp in nx.weakly_connected_components(sub)]
         connected_vertices = set()
         for comp in components:
-            if self._sigma[i] in comp:
+            if vertex in comp:
                 connected_vertices = comp
                 break
-                
-        SW_i = 0
-        for w in connected_vertices:
-            SW_i = SW_i + self._graph.graph.in_degree(w) - self._graph.graph.out_degree(w)
-        
-        return SW_i
+
+        return {
+            (u, w)
+            for (u, w) in self._dag.graph.edges()
+            if u not in connected_vertices and w in connected_vertices
+        }
     
-    def canonical_tree_extension(self) -> TreeExtension:
-        """Create canonical tree extension with same edge scanwidth as sigma.
+    def to_canonical_tree_extension(self) -> TreeExtension:
+        """Create canonical tree extension with same edge scanwidth as ordering.
         
         Returns
         -------
@@ -152,13 +112,13 @@ class Extension:
         """
         # Initialize
         Gamma = nx.DiGraph()
-        sig = self._sigma.copy()
-        rho: Dict = {node: None for node in self._graph.graph.nodes()}
+        sig = self._ordering.copy()
+        rho: Dict = {node: None for node in self._dag.graph.nodes()}
         
         while len(sig) > 0:
             v = sig[0]
             sig.remove(v)
-            C = list(self._graph.graph.successors(v))
+            C = list(self._dag.graph.successors(v))
             Gamma.add_node(v)
             rho[v] = v
             
@@ -170,27 +130,34 @@ class Extension:
                     if rho[u] in R:
                         rho[u] = v
         
-        tree = TreeExtension(self._graph, Gamma)
+        tree = TreeExtension(self._dag, Gamma)
         
         return tree
+
+    def canonical_tree_extension(self) -> TreeExtension:
+        """Return the canonical tree extension.
+
+        This forwards to :meth:`to_canonical_tree_extension`.
+        """
+        return self.to_canonical_tree_extension()
     
-    def _is_extension(self) -> bool:
-        """Check if sigma is indeed an extension of the graph.
+    def _is_valid(self) -> bool:
+        """Check if ordering is indeed an extension of the graph.
         
         Returns
         -------
         bool
-            True if sigma is a valid extension, False otherwise.
+            True if ordering is a valid extension, False otherwise.
         """
         seen = []
-        if len(self._sigma) != len(self._graph.graph.nodes()):
+        if len(self._ordering) != len(self._dag.graph.nodes()):
             return False
-        if set(self._sigma) != set(self._graph.graph.nodes()):
+        if set(self._ordering) != set(self._dag.graph.nodes()):
             return False
 
-        for i in range(len(self._sigma)):
-            v = self._sigma[i]
-            succ = list(self._graph.graph.successors(v))
+        for i in range(len(self._ordering)):
+            v = self._ordering[i]
+            succ = list(self._dag.graph.successors(v))
             for w in succ:
                 if w not in seen:
                     return False

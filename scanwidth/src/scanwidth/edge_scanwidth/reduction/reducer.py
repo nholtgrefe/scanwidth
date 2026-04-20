@@ -100,7 +100,7 @@ class Reducer:
 
         sub_result = solver.solve(DAG(contracted))
         block_sw = sub_result.value
-        partial_sigma = list(sub_result.extension.sigma)
+        partial_sigma = list(sub_result.extension.ordering)
 
         history.reverse()
         for (w, v) in history:
