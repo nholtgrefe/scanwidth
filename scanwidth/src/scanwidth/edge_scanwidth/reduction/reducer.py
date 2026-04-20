@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Set
+from typing import List, Optional, Set, Tuple
 
 import networkx as nx
 
@@ -60,13 +60,43 @@ class Reducer:
         solver: Solver,
     ) -> tuple:
         """Solve a single s-block, returning (partial_sigma, block_sw)."""
-        if len(sblock_set) == 2:
-            u, v = sblock_set
-            if (u, v) in graph.edges():
-                return [v, u], 1
-            return [u, v], 1
+        single_edge = Reducer._solve_single_edge_block(graph, sblock_set)
+        if single_edge is not None:
+            return single_edge
 
         subgraph = graph.subgraph(sblock_set)
+        cycle = Reducer._solve_single_root_cycle_block(subgraph)
+        if cycle is not None:
+            return cycle
+
+        contracted, history = Reducer._suppress_flow_nodes(subgraph)
+
+        sub_result = solver.solve(DAG(contracted))
+        block_sw = sub_result.value
+        partial_sigma = list(sub_result.extension.ordering)
+
+        partial_sigma = Reducer._unsuppress_flow_nodes(partial_sigma, history)
+
+        return partial_sigma, block_sw
+
+    @staticmethod
+    def _solve_single_edge_block(
+        graph: nx.DiGraph,
+        sblock_set: Set,
+    ) -> Optional[Tuple[List, int]]:
+        """Solve a block that is exactly one directed edge."""
+        if len(sblock_set) != 2:
+            return None
+        u, v = sblock_set
+        if (u, v) in graph.edges():
+            return [v, u], 1
+        return [u, v], 1
+
+    @staticmethod
+    def _solve_single_root_cycle_block(
+        subgraph: nx.DiGraph,
+    ) -> Optional[Tuple[List, int]]:
+        """Solve a single-root cycle-like block with known scanwidth 2."""
         roots = [
             v for v in subgraph.nodes()
             if subgraph.in_degree(v) == 0 and subgraph.out_degree(v) == 2
@@ -75,10 +105,7 @@ class Reducer:
             v for v in subgraph.nodes()
             if subgraph.out_degree(v) == 0 and subgraph.in_degree(v) == 2
         ]
-        flow_nodes = [
-            v for v in subgraph.nodes()
-            if subgraph.out_degree(v) == 1 and subgraph.in_degree(v) == 1
-        ]
+        flow_nodes = Reducer._flow_nodes(subgraph)
 
         if (
             len(roots) == 1
@@ -87,27 +114,38 @@ class Reducer:
         ):
             partial_sigma = list(reversed(list(nx.topological_sort(subgraph))))
             return partial_sigma, 2
+        return None
 
+    @staticmethod
+    def _flow_nodes(subgraph: nx.DiGraph) -> List:
+        """Return degree-(1,1) flow nodes in ``subgraph``."""
+        return [
+            v for v in subgraph.nodes()
+            if subgraph.out_degree(v) == 1 and subgraph.in_degree(v) == 1
+        ]
+
+    @staticmethod
+    def _suppress_flow_nodes(subgraph: nx.DiGraph) -> Tuple[nx.DiGraph, List[tuple]]:
+        """Contract suppressible flow nodes and return contraction history."""
         history: List[tuple] = []
         contracted = subgraph.copy()
-        for v in flow_nodes:
+        for v in Reducer._flow_nodes(subgraph):
             u = list(contracted.predecessors(v))[0]
             w = list(contracted.successors(v))[0]
             if (u, w) not in contracted.edges():
                 contracted.remove_node(v)
                 contracted.add_edge(u, w)
                 history.append((w, v))
+        return contracted, history
 
-        sub_result = solver.solve(DAG(contracted))
-        block_sw = sub_result.value
-        partial_sigma = list(sub_result.extension.ordering)
-
-        history.reverse()
-        for (w, v) in history:
-            idx = partial_sigma.index(w)
-            partial_sigma.insert(idx + 1, v)
-
-        return partial_sigma, block_sw
+    @staticmethod
+    def _unsuppress_flow_nodes(partial_sigma: List, history: List[tuple]) -> List:
+        """Undo suppressed flow-node contractions in reverse order."""
+        restored = list(partial_sigma)
+        for (w, v) in reversed(history):
+            idx = restored.index(w)
+            restored.insert(idx + 1, v)
+        return restored
 
     @staticmethod
     def _sblocks(graph: nx.DiGraph) -> List[Set]:
