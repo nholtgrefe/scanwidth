@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import networkx as nx
 
-from scanwidth import DAG, Extension, edge_scanwidth, TreeExtension
+from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
 
 
 def _build_chain() -> nx.DiGraph:
@@ -254,6 +254,39 @@ def test_heuristics_return_valid_extensions_and_consistent_scanwidth() -> None:
     assert sw_greedy == ext_greedy.edge_scanwidth()
     assert sw_cut == ext_cut.edge_scanwidth()
     assert sw_anneal == ext_anneal.edge_scanwidth()
+
+
+def test_node_scanwidth_algorithms_on_chain() -> None:
+    """Node-scanwidth algorithms return width 1 on a directed chain."""
+    dag = DAG(_build_chain())
+
+    sw_exhaustive, ext_exhaustive = node_scanwidth(dag, algorithm="exhaustive")
+    sw_greedy, ext_greedy = node_scanwidth(dag, algorithm="greedy")
+    sw_random, ext_random = node_scanwidth(dag, algorithm="random", seed=7)
+    sw_anneal, ext_anneal = node_scanwidth(
+        dag,
+        algorithm="simulated_annealing",
+        max_iter=5,
+        verbose=False,
+        seed=7,
+    )
+
+    assert sw_exhaustive == 1
+    assert sw_greedy == 1
+    assert sw_random == 1
+    assert sw_anneal == 1
+    assert ext_exhaustive.node_scanwidth() == 1
+    assert ext_greedy.node_scanwidth() == 1
+    assert ext_random.node_scanwidth() == 1
+    assert ext_anneal.node_scanwidth() == 1
+
+
+def test_node_scanwidth_exhaustive_matches_known_two_to_one_value() -> None:
+    """Exhaustive node-scanwidth solver matches known optimum."""
+    dag = DAG(_build_two_to_one())
+    sw, extension = node_scanwidth(dag, algorithm="exhaustive")
+    assert sw == 2
+    assert extension.node_scanwidth() == 2
 
 
 def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:

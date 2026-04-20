@@ -1,8 +1,5 @@
-"""Node-scanwidth algorithm namespace.
+"""Public node-scanwidth API."""
 
-This subpackage is intentionally minimal for now and will host node-scanwidth
-algorithm implementations that operate on the shared ``DAG``, ``Extension``,
-and ``TreeExtension`` domain objects.
-"""
+from scanwidth.node_scanwidth.api import node_scanwidth
 
-__all__ = []
+__all__ = ["node_scanwidth"]
