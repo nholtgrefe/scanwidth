@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Tuple
 
 from scanwidth.dag import DAG
+from scanwidth.edge_scanwidth.reduction.config import ReducerConfig
 from scanwidth.edge_scanwidth.reduction.reducer import Reducer
 from scanwidth.edge_scanwidth.solver.base import Solver
 from scanwidth.edge_scanwidth.solver.exact.exhaustive import ExhaustiveSolver
@@ -60,14 +61,19 @@ def edge_scanwidth(
         Edge-scanwidth value and the corresponding extension.
     """
     solver = _build_solver(algorithm, kwargs)
+    reducer_config = kwargs.pop("reducer_config", None)
     if kwargs:
         raise ValueError(
             f"Unexpected keyword arguments for algorithm '{algorithm}': "
             f"{sorted(kwargs)}"
         )
+    if reducer_config is not None and not isinstance(reducer_config, ReducerConfig):
+        raise TypeError("reducer_config must be a ReducerConfig instance.")
 
     if reduce:
-        result = Reducer().reduce_and_solve(dag=dag, solver=solver)
+        result = Reducer(
+            config=ReducerConfig() if reducer_config is None else reducer_config,
+        ).reduce_and_solve(dag=dag, solver=solver)
     else:
         result = solver.solve(dag)
 

@@ -8,6 +8,7 @@ from typing import List, Optional, Set, Tuple
 import networkx as nx
 
 from scanwidth.dag import DAG
+from scanwidth.edge_scanwidth.reduction.config import ReducerConfig
 from scanwidth.edge_scanwidth.solver.base import Solver
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
@@ -16,6 +17,8 @@ from scanwidth.extension import Extension
 @dataclass(frozen=True)
 class Reducer:
     """Apply s-block reduction and delegate each subproblem to a solver."""
+
+    config: ReducerConfig = ReducerConfig()
 
     def reduce_and_solve(self, dag: DAG, solver: Solver) -> SolverResult:
         """Solve edge scanwidth via s-block decomposition.
@@ -38,10 +41,14 @@ class Reducer:
             Solver result for the full graph.
         """
         graph = dag.graph
-        sblock_sets = self._sblocks(graph)
+        if self.config.use_sblocks:
+            sblock_sets = self._sblocks(graph)
+        else:
+            sblock_sets = [set(graph.nodes())]
         sigma: List = []
         sw = 0
 
+        # Blocks are independent and can later be solved in parallel.
         for sblock_set in sblock_sets:
             partial_sigma, block_sw = self._solve_block(
                 graph, sblock_set, solver,
@@ -53,29 +60,35 @@ class Reducer:
         extension = Extension(dag, sigma)
         return SolverResult(value=sw, extension=extension)
 
-    @staticmethod
     def _solve_block(
+        self,
         graph: nx.DiGraph,
         sblock_set: Set,
         solver: Solver,
     ) -> tuple:
         """Solve a single s-block, returning (partial_sigma, block_sw)."""
-        single_edge = Reducer._solve_single_edge_block(graph, sblock_set)
-        if single_edge is not None:
-            return single_edge
+        if self.config.use_single_edge_rule:
+            single_edge = self._solve_single_edge_block(graph, sblock_set)
+            if single_edge is not None:
+                return single_edge
 
         subgraph = graph.subgraph(sblock_set)
-        cycle = Reducer._solve_single_root_cycle_block(subgraph)
-        if cycle is not None:
-            return cycle
+        if self.config.use_single_root_cycle_rule:
+            cycle = self._solve_single_root_cycle_block(subgraph)
+            if cycle is not None:
+                return cycle
 
-        contracted, history = Reducer._suppress_flow_nodes(subgraph)
+        history: List[tuple] = []
+        reduced_subgraph = subgraph.copy()
+        if self.config.use_flow_suppression:
+            reduced_subgraph, history = self._suppress_flow_nodes(subgraph)
 
-        sub_result = solver.solve(DAG(contracted))
+        sub_result = solver.solve(DAG(reduced_subgraph))
         block_sw = sub_result.value
         partial_sigma = list(sub_result.extension.ordering)
 
-        partial_sigma = Reducer._unsuppress_flow_nodes(partial_sigma, history)
+        if self.config.use_flow_suppression:
+            partial_sigma = self._unsuppress_flow_nodes(partial_sigma, history)
 
         return partial_sigma, block_sw
 

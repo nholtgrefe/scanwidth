@@ -9,6 +9,7 @@ from __future__ import annotations
 import networkx as nx
 
 from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
+from scanwidth.node_scanwidth.reduction.reducer import Reducer
 
 
 def _build_chain() -> nx.DiGraph:
@@ -287,6 +288,44 @@ def test_node_scanwidth_exhaustive_matches_known_two_to_one_value() -> None:
     sw, extension = node_scanwidth(dag, algorithm="exhaustive")
     assert sw == 2
     assert extension.node_scanwidth() == 2
+
+
+def test_node_scanwidth_reducer_tree_rule_returns_one() -> None:
+    """Node reducer applies tree shortcut with node scanwidth 1."""
+    graph = nx.DiGraph([(1, 2), (1, 3), (2, 4), (2, 5)])
+    dag = DAG(graph)
+    value, extension = node_scanwidth(dag, algorithm="greedy", reduce=True)
+    assert value == 1
+    assert extension.node_scanwidth() == 1
+
+
+def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
+    """Reducer suppresses parent in a chain-parent/chain-child pair."""
+    # 0 -> 1 -> 2 -> 3, where 1 and 2 are chain vertices and 1 is parent of 2.
+    subgraph = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
+    reduced, history = Reducer._suppress_chain_vertices(subgraph)
+    assert 1 not in reduced.nodes()
+    assert (0, 2) in reduced.edges()
+    restored = Reducer._unsuppress_chain_vertices([3, 2, 0], history)
+    assert restored == [3, 2, 1, 0]
+
+
+def test_node_scanwidth_ilp_matches_exhaustive_on_chain() -> None:
+    """ILP node-scanwidth solver matches exhaustive optimum on a chain."""
+    dag = DAG(_build_chain())
+    sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="exhaustive")
+    assert sw_ilp == sw_exact == 1
+    assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 1
+
+
+def test_node_scanwidth_ilp_matches_exhaustive_on_two_to_one() -> None:
+    """ILP node-scanwidth solver matches exhaustive optimum on two-to-one DAG."""
+    dag = DAG(_build_two_to_one())
+    sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="exhaustive")
+    assert sw_ilp == sw_exact == 2
+    assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 2
 
 
 def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:
