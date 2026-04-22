@@ -8,7 +8,7 @@ from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.reduction.config import ReducerConfig
 from scanwidth.edge_scanwidth.reduction.reducer import Reducer
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth.edge_scanwidth.solver.exact.exhaustive import ExhaustiveSolver
+from scanwidth.edge_scanwidth.solver.exact.exhaustive import BruteForceSolver
 from scanwidth.edge_scanwidth.solver.exact.three_partition import (
     ThreePartitionSolver,
 )
@@ -41,7 +41,8 @@ def edge_scanwidth(
         Solver name. Supported values are:
 
         - ``"xp"``: exact XP algorithm with increasing ``k`` (default).
-        - ``"exhaustive"``: exact exhaustive search over all extensions.
+        - ``"brute_force"``: exact brute-force search over all extensions.
+        - ``"exhaustive"``: alias for ``"brute_force"``.
         - ``"two_partition"``: exact two-partition recursion.
         - ``"three_partition"``: exact 3-partition recursion.
         - ``"greedy"``: greedy heuristic.
@@ -50,7 +51,7 @@ def edge_scanwidth(
         - ``"simulated_annealing"``: simulated-annealing heuristic.
 
     reduce : bool, optional
-        If True, apply s-block reduction before solving. Default is True.
+        If True, apply reduction rules before solving. Default is True.
     **kwargs : object
         Algorithm-specific keyword arguments forwarded to the matching
         solver class.
@@ -89,8 +90,8 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
                 "fixed-k mode."
             )
         return XpSolver()
-    if algorithm == "exhaustive":
-        return ExhaustiveSolver()
+    if algorithm in {"brute_force", "exhaustive"}:
+        return BruteForceSolver()
     if algorithm == "two_partition":
         return TwoPartitionSolver()
     if algorithm == "three_partition":
@@ -111,6 +112,7 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
             seed=int(kwargs.pop("seed", 42)),
         )
     raise ValueError(
-        "algorithm must be one of {'xp', 'exhaustive', 'two_partition', "
-        "'greedy', 'random', 'cut_splitting', 'simulated_annealing'}"
+        "algorithm must be one of {'xp', 'brute_force', 'exhaustive', "
+        "'two_partition', 'greedy', 'random', 'cut_splitting', "
+        "'simulated_annealing'}"
     )

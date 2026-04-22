@@ -13,7 +13,7 @@ from scanwidth.extension import Extension
 
 
 @dataclass(frozen=True)
-class ExhaustiveSolver(Solver):
+class BruteForceSolver(Solver):
     """Exhaustive search over all topological orders.
 
     Enumerates every topological order of the input DAG, evaluates the

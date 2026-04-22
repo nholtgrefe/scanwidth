@@ -13,7 +13,7 @@ from scanwidth.node_scanwidth.solver.base import Solver
 
 
 @dataclass(frozen=True)
-class ExhaustiveSolver(Solver):
+class BruteForceSolver(Solver):
     """Exhaustive search over all topological orders for node scanwidth."""
 
     def solve(self, dag: DAG) -> SolverResult:

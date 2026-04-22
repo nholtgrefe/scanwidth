@@ -10,6 +10,14 @@ import networkx as nx
 
 from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
 from scanwidth.node_scanwidth.reduction.reducer import Reducer
+from scanwidth._utils import (
+    chain_vertices,
+    delta_in,
+    find_component,
+    infinity_for,
+    is_directed_tree,
+    sblocks,
+)
 
 
 def _build_chain() -> nx.DiGraph:
@@ -299,15 +307,70 @@ def test_node_scanwidth_reducer_tree_rule_returns_one() -> None:
     assert extension.node_scanwidth() == 1
 
 
+def test_node_scanwidth_singleton_graph_shortcut_returns_zero() -> None:
+    """Node reducer returns zero and trivial extension on singleton graph."""
+    graph = nx.DiGraph()
+    graph.add_node("only")
+    dag = DAG(graph)
+    value, extension = node_scanwidth(dag, algorithm="greedy", reduce=True)
+    assert value == 0
+    assert extension.ordering == ["only"]
+    assert extension.node_scanwidth() == 0
+
+
+def test_edge_scanwidth_singleton_graph_shortcut_returns_zero() -> None:
+    """Edge reducer returns zero and trivial extension on singleton graph."""
+    graph = nx.DiGraph()
+    graph.add_node("only")
+    dag = DAG(graph)
+    value, extension = edge_scanwidth(dag, algorithm="greedy", reduce=True)
+    assert value == 0
+    assert extension.ordering == ["only"]
+    assert extension.edge_scanwidth() == 0
+
+
 def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
-    """Reducer suppresses parent in a chain-parent/chain-child pair."""
-    # 0 -> 1 -> 2 -> 3, where 1 and 2 are chain vertices and 1 is parent of 2.
+    """Reducer suppresses all suppressible chain vertices (flow vertices)."""
+    # 0 -> 1 -> 2 -> 3, where 1 and 2 are suppressible chain vertices.
     subgraph = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
     reduced, history = Reducer._suppress_chain_vertices(subgraph)
-    assert 1 not in reduced.nodes()
-    assert (0, 2) in reduced.edges()
-    restored = Reducer._unsuppress_chain_vertices([3, 2, 0], history)
+    assert set(reduced.nodes()) == {0, 3}
+    assert (0, 3) in reduced.edges()
+    restored = Reducer._unsuppress_chain_vertices([3, 0], history)
     assert restored == [3, 2, 1, 0]
+
+
+def test_global_sblocks_returns_expected_blocks_for_chain() -> None:
+    """Global s-block helper returns expected biconnected blocks on a chain."""
+    graph = _build_chain()
+    blocks = sblocks(graph)
+    assert blocks == [{1, 2}, {2, 3}]
+
+
+def test_global_edge_solver_utils_match_basic_expectations() -> None:
+    """Global edge helper utilities keep expected semantics."""
+    graph = _build_two_to_one()
+    vertices = {3}
+    components = [{1, 2}, {3}]
+
+    assert delta_in(graph, vertices) == 2
+    assert find_component(components, 3) == {3}
+    assert find_component(components, "missing") == set()
+    assert infinity_for(graph) == graph.number_of_edges() + 1
+
+
+def test_global_chain_vertices_matches_flow_vertex_definition() -> None:
+    """Global chain-vertex helper returns degree-(1,1) vertices."""
+    graph = nx.DiGraph([(0, 1), (1, 2), (2, 3), (2, 4)])
+    assert chain_vertices(graph) == [1]
+
+
+def test_global_is_directed_tree_detects_tree_shape() -> None:
+    """Global directed-tree helper identifies directed rooted trees."""
+    tree_graph = nx.DiGraph([(1, 2), (1, 3), (3, 4)])
+    non_tree_graph = nx.DiGraph([(1, 2), (3, 2)])
+    assert is_directed_tree(tree_graph)
+    assert not is_directed_tree(non_tree_graph)
 
 
 def test_node_scanwidth_ilp_matches_exhaustive_on_chain() -> None:

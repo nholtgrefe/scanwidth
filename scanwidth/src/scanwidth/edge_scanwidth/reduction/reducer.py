@@ -12,6 +12,7 @@ from scanwidth.edge_scanwidth.reduction.config import ReducerConfig
 from scanwidth.edge_scanwidth.solver.base import Solver
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
+from scanwidth._utils import chain_vertices, sblocks
 
 
 @dataclass(frozen=True)
@@ -41,8 +42,12 @@ class Reducer:
             Solver result for the full graph.
         """
         graph = dag.graph
+        if graph.number_of_nodes() == 1:
+            (vertex,) = tuple(graph.nodes())
+            return SolverResult(value=0, extension=Extension(dag, [vertex]))
+
         if self.config.use_sblocks:
-            sblock_sets = self._sblocks(graph)
+            sblock_sets = sblocks(graph)
         else:
             sblock_sets = [set(graph.nodes())]
         sigma: List = []
@@ -118,31 +123,28 @@ class Reducer:
             v for v in subgraph.nodes()
             if subgraph.out_degree(v) == 0 and subgraph.in_degree(v) == 2
         ]
-        flow_nodes = Reducer._flow_nodes(subgraph)
+        chain_nodes = chain_vertices(subgraph)
 
         if (
             len(roots) == 1
             and len(leafs) == 1
-            and len(flow_nodes) == len(subgraph.nodes()) - 2
+            and len(chain_nodes) == len(subgraph.nodes()) - 2
         ):
             partial_sigma = list(reversed(list(nx.topological_sort(subgraph))))
             return partial_sigma, 2
         return None
 
     @staticmethod
-    def _flow_nodes(subgraph: nx.DiGraph) -> List:
-        """Return degree-(1,1) flow nodes in ``subgraph``."""
-        return [
-            v for v in subgraph.nodes()
-            if subgraph.out_degree(v) == 1 and subgraph.in_degree(v) == 1
-        ]
-
-    @staticmethod
     def _suppress_flow_nodes(subgraph: nx.DiGraph) -> Tuple[nx.DiGraph, List[tuple]]:
-        """Contract suppressible flow nodes and return contraction history."""
+        """Contract suppressible chain vertices and return contraction history.
+
+        Notes
+        -----
+        Chain vertices are the same as flow vertices (indegree 1, outdegree 1).
+        """
         history: List[tuple] = []
         contracted = subgraph.copy()
-        for v in Reducer._flow_nodes(subgraph):
+        for v in chain_vertices(subgraph):
             u = list(contracted.predecessors(v))[0]
             w = list(contracted.successors(v))[0]
             if (u, w) not in contracted.edges():
@@ -160,61 +162,3 @@ class Reducer:
             restored.insert(idx + 1, v)
         return restored
 
-    @staticmethod
-    def _sblocks(graph: nx.DiGraph) -> List[Set]:
-        """Return node sets for s-blocks in merge order.
-
-        Uses a reversed DFS in the s-block-cut-tree starting at the
-        rootblock, so the rootblock comes last.
-
-        Parameters
-        ----------
-        graph : nx.DiGraph
-            Input graph.
-
-        Returns
-        -------
-        List[Set]
-            Ordered list of s-block node sets.
-        """
-        roots = {v for v in graph.nodes() if graph.in_degree(v) == 0}
-        aux = graph.to_undirected()
-
-        for root1 in roots:
-            for root2 in roots:
-                if (
-                    (root1, root2) not in aux.edges()
-                    and (root2, root1) not in aux.edges
-                    and root1 != root2
-                ):
-                    aux.add_edge(root1, root2)
-
-        sblock_sets = list(nx.biconnected_components(aux))
-        dcut_vertices = list(nx.articulation_points(aux))
-
-        sblock_cut_tree = nx.Graph()
-        for v in dcut_vertices:
-            sblock_cut_tree.add_node(v)
-
-        rootblock_index = None
-        for i, block in enumerate(sblock_sets):
-            node_name = f"block_{i}"
-            if roots.issubset(block):
-                rootblock_index = i
-            sblock_cut_tree.add_node(node_name)
-            for v in dcut_vertices:
-                if v in block:
-                    sblock_cut_tree.add_edge(v, node_name)
-
-        sblock_order = list(
-            nx.dfs_preorder_nodes(
-                sblock_cut_tree, source=f"block_{rootblock_index}",
-            )
-        )
-        sblock_order = [
-            int(name[6:])
-            for name in sblock_order
-            if str(name).startswith("block_")
-        ]
-
-        return [sblock_sets[i] for i in sblock_order]

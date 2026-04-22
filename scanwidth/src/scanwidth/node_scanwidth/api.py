@@ -9,7 +9,7 @@ from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.reduction.config import ReducerConfig
 from scanwidth.node_scanwidth.reduction.reducer import Reducer
 from scanwidth.node_scanwidth.solver.base import Solver
-from scanwidth.node_scanwidth.solver.exact.exhaustive import ExhaustiveSolver
+from scanwidth.node_scanwidth.solver.exact.exhaustive import BruteForceSolver
 from scanwidth.node_scanwidth.solver.exact.ilp import ILPSolver
 from scanwidth.node_scanwidth.solver.heuristic.greedy import GreedySolver
 from scanwidth.node_scanwidth.solver.heuristic.random import RandomSolver
@@ -20,7 +20,7 @@ from scanwidth.node_scanwidth.solver.heuristic.simulated_annealing import (
 
 def node_scanwidth(
     dag: DAG,
-    algorithm: str = "exhaustive",
+    algorithm: str = "brute_force",
     reduce: bool = True,
     **kwargs: object,
 ) -> Tuple[int, Extension]:
@@ -45,8 +45,8 @@ def node_scanwidth(
 
 def _build_solver(algorithm: str, kwargs: dict) -> Solver:
     """Instantiate a node-scanwidth solver from name and kwargs."""
-    if algorithm == "exhaustive":
-        return ExhaustiveSolver()
+    if algorithm in {"brute_force", "exhaustive"}:
+        return BruteForceSolver()
     if algorithm == "ilp":
         raw_time_limit = kwargs.pop("time_limit", None)
         return ILPSolver(
@@ -68,6 +68,6 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
             seed=int(kwargs.pop("seed", 42)),
         )
     raise ValueError(
-        "algorithm must be one of {'exhaustive', 'ilp', 'greedy', 'random', "
-        "'simulated_annealing'}"
+        "algorithm must be one of {'brute_force', 'exhaustive', 'ilp', "
+        "'greedy', 'random', 'simulated_annealing'}"
     )

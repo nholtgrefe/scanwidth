@@ -11,7 +11,7 @@ from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.solver.base import Solver
-from scanwidth.node_scanwidth.solver.utils import node_bag_size
+from scanwidth.node_scanwidth.solver._utils import node_bag_size
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@ from typing import Dict, List, Set
 
 from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth.edge_scanwidth.solver.utils import delta_in, infinity_for
+from scanwidth._utils import delta_in, infinity_for
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 

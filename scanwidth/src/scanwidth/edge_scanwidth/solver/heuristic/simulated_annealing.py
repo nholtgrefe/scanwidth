@@ -17,7 +17,7 @@ from scanwidth.edge_scanwidth.solver.heuristic.cut_splitting import (
 )
 from scanwidth.edge_scanwidth.solver.heuristic.greedy import GreedySolver
 from scanwidth.edge_scanwidth.solver.heuristic.random import RandomSolver
-from scanwidth.edge_scanwidth.solver.utils import delta_in
+from scanwidth._utils import delta_in
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 from scanwidth.tree_extension import TreeExtension

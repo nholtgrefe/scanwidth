@@ -11,9 +11,9 @@ from networkx.algorithms.flow import shortest_augmenting_path
 
 from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth.edge_scanwidth.solver.utils import infinity_for
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
+from scanwidth._utils import infinity_for
 
 
 @dataclass(frozen=True)

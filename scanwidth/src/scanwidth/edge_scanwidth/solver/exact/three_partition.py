@@ -10,7 +10,7 @@ import networkx as nx
 
 from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth.edge_scanwidth.solver.utils import (
+from scanwidth._utils import (
     delta_in,
     find_component,
     infinity_for,

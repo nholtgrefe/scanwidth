@@ -1,7 +1,7 @@
 """Solver classes for edge scanwidth."""
 
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth.edge_scanwidth.solver.exact.exhaustive import ExhaustiveSolver
+from scanwidth.edge_scanwidth.solver.exact.exhaustive import BruteForceSolver
 from scanwidth.edge_scanwidth.solver.exact.three_partition import (
     ThreePartitionSolver,
 )
@@ -20,7 +20,7 @@ __all__ = [
     "Solver",
     "XpSolver",
     "RpswTable",
-    "ExhaustiveSolver",
+    "BruteForceSolver",
     "TwoPartitionSolver",
     "ThreePartitionSolver",
     "GreedySolver",

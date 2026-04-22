@@ -16,7 +16,7 @@ from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.solver.base import Solver
 from scanwidth.node_scanwidth.solver.heuristic.greedy import GreedySolver
 from scanwidth.node_scanwidth.solver.heuristic.random import RandomSolver
-from scanwidth.node_scanwidth.solver.utils import node_bag_size
+from scanwidth.node_scanwidth.solver._utils import node_bag_size
 from scanwidth.tree_extension import TreeExtension
 
 
@@ -28,7 +28,7 @@ class SimulatedAnnealingSolver(Solver):
     p_in: float = 0.9
     p_stop: float = 0.01
     init_ext: Union[str, Extension] = "greedy"
-    verbose: bool = True
+    verbose: bool = False
     seed: int = 42
 
     def solve(self, dag: DAG) -> SolverResult:
