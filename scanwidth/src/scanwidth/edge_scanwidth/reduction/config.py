@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -19,9 +20,16 @@ class ReducerConfig:
         If True, solve single-root cycle blocks directly.
     use_flow_suppression : bool, optional
         If True, apply flow-node suppression before delegating to solver.
+    parallel_sblocks : bool, optional
+        If True, solve independent s-block subproblems concurrently.
+    sblock_max_workers : Optional[int], optional
+        Maximum number of workers used for s-block parallelization.
+        ``None`` delegates worker selection to the executor default.
     """
 
     use_sblocks: bool = True
     use_single_edge_rule: bool = True
     use_single_root_cycle_rule: bool = True
     use_flow_suppression: bool = True
+    parallel_sblocks: bool = False
+    sblock_max_workers: Optional[int] = None

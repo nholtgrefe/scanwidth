@@ -24,7 +24,47 @@ def node_scanwidth(
     reduce: bool = True,
     **kwargs: object,
 ) -> Tuple[int, Extension]:
-    """Compute node scanwidth of a DAG using the selected algorithm."""
+    """Compute node scanwidth of a DAG using the selected algorithm.
+
+    Parameters
+    ----------
+    dag : DAG
+        Input directed acyclic graph.
+    algorithm : str, optional
+        Solver name. Supported values are:
+
+        - ``"brute_force"``: exact brute-force search over all extensions.
+        - ``"ilp"``: exact mixed-integer linear programming solver.
+        - ``"greedy"``: greedy heuristic.
+        - ``"random"``: random extension heuristic.
+        - ``"simulated_annealing"``: simulated-annealing heuristic.
+    reduce : bool, optional
+        If True, apply reduction rules before solving. Default is True.
+    **kwargs : object
+        Algorithm-specific keyword arguments plus optional
+        ``reducer_config=ReducerConfig(...)``. Set
+        ``ReducerConfig(parallel_sblocks=True)`` to solve independent
+        s-blocks concurrently.
+
+    Returns
+    -------
+    Tuple[int, Extension]
+        Node-scanwidth value and the corresponding extension.
+
+    Examples
+    --------
+    >>> import networkx as nx
+    >>> from scanwidth import DAG, node_scanwidth
+    >>> from scanwidth.node_scanwidth.reduction.config import ReducerConfig
+    >>> graph = nx.DiGraph([(1, 3), (2, 3)])
+    >>> value, extension = node_scanwidth(
+    ...     DAG(graph),
+    ...     algorithm="brute_force",
+    ...     reducer_config=ReducerConfig(parallel_sblocks=True, sblock_max_workers=2),
+    ... )
+    >>> value == extension.node_scanwidth()
+    True
+    """
     solver = _build_solver(algorithm, kwargs)
     reducer_config = kwargs.pop("reducer_config", None)
     if kwargs:
@@ -45,7 +85,7 @@ def node_scanwidth(
 
 def _build_solver(algorithm: str, kwargs: dict) -> Solver:
     """Instantiate a node-scanwidth solver from name and kwargs."""
-    if algorithm in {"brute_force", "exhaustive"}:
+    if algorithm == "brute_force":
         return BruteForceSolver()
     if algorithm == "ilp":
         raw_time_limit = kwargs.pop("time_limit", None)

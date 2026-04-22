@@ -53,13 +53,29 @@ def edge_scanwidth(
     reduce : bool, optional
         If True, apply reduction rules before solving. Default is True.
     **kwargs : object
-        Algorithm-specific keyword arguments forwarded to the matching
-        solver class.
+        Algorithm-specific keyword arguments plus optional
+        ``reducer_config=ReducerConfig(...)``. Set
+        ``ReducerConfig(parallel_sblocks=True)`` to solve independent
+        s-blocks concurrently.
 
     Returns
     -------
     Tuple[int, Extension]
         Edge-scanwidth value and the corresponding extension.
+
+    Examples
+    --------
+    >>> import networkx as nx
+    >>> from scanwidth import DAG, edge_scanwidth
+    >>> from scanwidth.edge_scanwidth.reduction.config import ReducerConfig
+    >>> graph = nx.DiGraph([(1, 3), (2, 3)])
+    >>> value, extension = edge_scanwidth(
+    ...     DAG(graph),
+    ...     algorithm="greedy",
+    ...     reducer_config=ReducerConfig(parallel_sblocks=True, sblock_max_workers=2),
+    ... )
+    >>> value == extension.edge_scanwidth()
+    True
     """
     solver = _build_solver(algorithm, kwargs)
     reducer_config = kwargs.pop("reducer_config", None)

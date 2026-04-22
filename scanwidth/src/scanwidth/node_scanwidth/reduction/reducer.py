@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Optional, Set, Tuple
 
@@ -40,10 +41,25 @@ class Reducer:
             sblock_sets = [set(graph.nodes())]
 
         # Blocks are independent and can later be processed in parallel.
+        if self.config.parallel_sblocks and len(sblock_sets) > 1:
+            block_results: List[Tuple[List, int]] = [([], 0)] * len(sblock_sets)
+            with ThreadPoolExecutor(
+                max_workers=self.config.sblock_max_workers,
+            ) as executor:
+                future_to_index = {
+                    executor.submit(self._solve_block, graph, block_set, solver): i
+                    for i, block_set in enumerate(sblock_sets)
+                }
+                for future in as_completed(future_to_index):
+                    block_results[future_to_index[future]] = future.result()
+        else:
+            block_results = [
+                self._solve_block(graph, block_set, solver) for block_set in sblock_sets
+            ]
+
         sigma: List = []
         nsw = 0
-        for block_set in sblock_sets:
-            partial_sigma, block_nsw = self._solve_block(graph, block_set, solver)
+        for partial_sigma, block_nsw in block_results:
             nsw = max(nsw, block_nsw)
             partial_sigma = [v for v in partial_sigma if v not in sigma]
             sigma = partial_sigma + sigma

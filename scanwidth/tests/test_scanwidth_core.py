@@ -9,6 +9,8 @@ from __future__ import annotations
 import networkx as nx
 
 from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
+from scanwidth.edge_scanwidth.reduction.config import ReducerConfig as EdgeReducerConfig
+from scanwidth.node_scanwidth.reduction.config import ReducerConfig as NodeReducerConfig
 from scanwidth.node_scanwidth.reduction.reducer import Reducer
 from scanwidth._utils import (
     chain_vertices,
@@ -327,6 +329,44 @@ def test_edge_scanwidth_singleton_graph_shortcut_returns_zero() -> None:
     assert value == 0
     assert extension.ordering == ["only"]
     assert extension.edge_scanwidth() == 0
+
+
+def test_edge_scanwidth_parallel_sblocks_matches_sequential() -> None:
+    """Parallel and sequential edge s-block solving return same value."""
+    dag = DAG(_build_chain())
+    seq_value, seq_ext = edge_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=EdgeReducerConfig(parallel_sblocks=False),
+    )
+    par_value, par_ext = edge_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=EdgeReducerConfig(parallel_sblocks=True, sblock_max_workers=2),
+    )
+    assert par_value == seq_value
+    assert par_value == par_ext.edge_scanwidth() == seq_ext.edge_scanwidth()
+
+
+def test_node_scanwidth_parallel_sblocks_matches_sequential() -> None:
+    """Parallel and sequential node s-block solving return same value."""
+    dag = DAG(_build_chain())
+    seq_value, seq_ext = node_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=NodeReducerConfig(parallel_sblocks=False),
+    )
+    par_value, par_ext = node_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=NodeReducerConfig(parallel_sblocks=True, sblock_max_workers=2),
+    )
+    assert par_value == seq_value
+    assert par_value == par_ext.node_scanwidth() == seq_ext.node_scanwidth()
 
 
 def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
