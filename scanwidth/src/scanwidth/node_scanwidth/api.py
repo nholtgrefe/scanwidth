@@ -104,10 +104,10 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
             p_in=float(kwargs.pop("p_in", 0.9)),
             p_stop=float(kwargs.pop("p_stop", 0.01)),
             init_ext=kwargs.pop("init_ext", "greedy"),  # type: ignore[arg-type]
-            verbose=bool(kwargs.pop("verbose", True)),
+            verbose=bool(kwargs.pop("verbose", False)),
             seed=int(kwargs.pop("seed", 42)),
         )
     raise ValueError(
-        "algorithm must be one of {'brute_force', 'exhaustive', 'ilp', "
+        "algorithm must be one of {'brute_force', 'ilp', "
         "'greedy', 'random', 'simulated_annealing'}"
     )

@@ -42,7 +42,6 @@ def edge_scanwidth(
 
         - ``"xp"``: exact XP algorithm with increasing ``k`` (default).
         - ``"brute_force"``: exact brute-force search over all extensions.
-        - ``"exhaustive"``: alias for ``"brute_force"``.
         - ``"two_partition"``: exact two-partition recursion.
         - ``"three_partition"``: exact 3-partition recursion.
         - ``"greedy"``: greedy heuristic.
@@ -106,7 +105,7 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
                 "fixed-k mode."
             )
         return XpSolver()
-    if algorithm in {"brute_force", "exhaustive"}:
+    if algorithm == "brute_force":
         return BruteForceSolver()
     if algorithm == "two_partition":
         return TwoPartitionSolver()
@@ -124,11 +123,11 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
             p_in=float(kwargs.pop("p_in", 0.9)),
             p_stop=float(kwargs.pop("p_stop", 0.01)),
             init_ext=kwargs.pop("init_ext", "greedy"),  # type: ignore[arg-type]
-            verbose=bool(kwargs.pop("verbose", True)),
+            verbose=bool(kwargs.pop("verbose", False)),
             seed=int(kwargs.pop("seed", 42)),
         )
     raise ValueError(
-        "algorithm must be one of {'xp', 'brute_force', 'exhaustive', "
+        "algorithm must be one of {'xp', 'brute_force', "
         "'two_partition', 'greedy', 'random', 'cut_splitting', "
         "'simulated_annealing'}"
     )

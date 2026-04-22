@@ -230,7 +230,7 @@ def test_exact_functions_match_known_chain_scanwidth() -> None:
     dag = DAG(_build_chain())
 
     sw_exhaustive, ext_exhaustive = edge_scanwidth(
-        dag, algorithm="exhaustive", reduce=False,
+        dag, algorithm="brute_force", reduce=False,
     )
     sw_two_partition, ext_two_partition = edge_scanwidth(
         dag, algorithm="two_partition", reduce=False,
@@ -271,7 +271,7 @@ def test_node_scanwidth_algorithms_on_chain() -> None:
     """Node-scanwidth algorithms return width 1 on a directed chain."""
     dag = DAG(_build_chain())
 
-    sw_exhaustive, ext_exhaustive = node_scanwidth(dag, algorithm="exhaustive")
+    sw_exhaustive, ext_exhaustive = node_scanwidth(dag, algorithm="brute_force")
     sw_greedy, ext_greedy = node_scanwidth(dag, algorithm="greedy")
     sw_random, ext_random = node_scanwidth(dag, algorithm="random", seed=7)
     sw_anneal, ext_anneal = node_scanwidth(
@@ -295,7 +295,7 @@ def test_node_scanwidth_algorithms_on_chain() -> None:
 def test_node_scanwidth_exhaustive_matches_known_two_to_one_value() -> None:
     """Exhaustive node-scanwidth solver matches known optimum."""
     dag = DAG(_build_two_to_one())
-    sw, extension = node_scanwidth(dag, algorithm="exhaustive")
+    sw, extension = node_scanwidth(dag, algorithm="brute_force")
     assert sw == 2
     assert extension.node_scanwidth() == 2
 
@@ -369,6 +369,42 @@ def test_node_scanwidth_parallel_sblocks_matches_sequential() -> None:
     assert par_value == par_ext.node_scanwidth() == seq_ext.node_scanwidth()
 
 
+def test_node_scanwidth_reticulation_path_shortcut_matches_bruteforce() -> None:
+    """Reticulation-path shortcut keeps brute-force optimum on diamond DAG."""
+    graph = nx.DiGraph([("r", "a"), ("r", "b"), ("a", "q"), ("b", "q")])
+    dag = DAG(graph)
+
+    value_reduced, ext_reduced = node_scanwidth(
+        dag, algorithm="brute_force", reduce=True,
+    )
+    value_direct, ext_direct = node_scanwidth(
+        dag, algorithm="brute_force", reduce=False,
+    )
+    assert value_reduced == value_direct == 2
+    assert ext_reduced.node_scanwidth() == ext_direct.node_scanwidth() == 2
+
+
+def test_node_scanwidth_reticulation_path_shortcut_toggle() -> None:
+    """Reticulation-path shortcut toggle keeps optimal node scanwidth value."""
+    graph = nx.DiGraph([("r", "a"), ("r", "b"), ("a", "q"), ("b", "q")])
+    dag = DAG(graph)
+
+    value_on, ext_on = node_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=NodeReducerConfig(use_reticulation_path_shortcut=True),
+    )
+    value_off, ext_off = node_scanwidth(
+        dag,
+        algorithm="brute_force",
+        reduce=True,
+        reducer_config=NodeReducerConfig(use_reticulation_path_shortcut=False),
+    )
+    assert value_on == value_off == 2
+    assert ext_on.node_scanwidth() == ext_off.node_scanwidth() == 2
+
+
 def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
     """Reducer suppresses all suppressible chain vertices (flow vertices)."""
     # 0 -> 1 -> 2 -> 3, where 1 and 2 are suppressible chain vertices.
@@ -383,8 +419,22 @@ def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
 def test_global_sblocks_returns_expected_blocks_for_chain() -> None:
     """Global s-block helper returns expected biconnected blocks on a chain."""
     graph = _build_chain()
-    blocks = sblocks(graph)
+    block_infos = sblocks(graph)
+    blocks = [block for block, _ in block_infos]
+    is_root_block = [flag for _, flag in block_infos]
     assert blocks == [{1, 2}, {2, 3}]
+    assert is_root_block == [False, False]
+
+
+def test_global_sblocks_marks_special_root_block_for_multi_root_graph() -> None:
+    """S-block helper marks root block when graph has multiple roots."""
+    graph = nx.DiGraph([(1, 3), (2, 3)])
+    block_infos = sblocks(graph)
+    blocks = [block for block, _ in block_infos]
+    is_root_block = [flag for _, flag in block_infos]
+    assert len(blocks) == 1
+    assert blocks[0] == {1, 2, 3}
+    assert is_root_block == [True]
 
 
 def test_global_edge_solver_utils_match_basic_expectations() -> None:
@@ -417,7 +467,7 @@ def test_node_scanwidth_ilp_matches_exhaustive_on_chain() -> None:
     """ILP node-scanwidth solver matches exhaustive optimum on a chain."""
     dag = DAG(_build_chain())
     sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
-    sw_exact, ext_exact = node_scanwidth(dag, algorithm="exhaustive")
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
     assert sw_ilp == sw_exact == 1
     assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 1
 
@@ -426,7 +476,7 @@ def test_node_scanwidth_ilp_matches_exhaustive_on_two_to_one() -> None:
     """ILP node-scanwidth solver matches exhaustive optimum on two-to-one DAG."""
     dag = DAG(_build_two_to_one())
     sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
-    sw_exact, ext_exact = node_scanwidth(dag, algorithm="exhaustive")
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
     assert sw_ilp == sw_exact == 2
     assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 2
 
@@ -440,7 +490,7 @@ def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:
         Expected optimal scanwidth of the generated DAG.
     """
     dag = DAG(_build_star_to_sink(expected_scanwidth))
-    sw, ext = edge_scanwidth(dag, algorithm="exhaustive", reduce=False)
+    sw, ext = edge_scanwidth(dag, algorithm="brute_force", reduce=False)
 
     assert ext is not None
     assert sw == expected_scanwidth
@@ -569,7 +619,7 @@ def test_n09_reduced_algorithms_regression_values() -> None:
 
     cases = [
         ("xp", {}, {5}),
-        ("exhaustive", {}, {5}),
+        ("brute_force", {}, {5}),
         ("two_partition", {}, {5}),
         ("three_partition", {}, {5}),
         ("greedy", {}, {5, 6}),

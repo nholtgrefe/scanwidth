@@ -34,27 +34,36 @@ class Reducer:
             if tree is not None:
                 return SolverResult(value=tree[1], extension=Extension(dag, tree[0]))
 
-        sblock_sets: List[Set]
+        block_infos: List[Tuple[Set, bool]]
         if self.config.use_sblocks:
-            sblock_sets = sblocks(graph)
+            block_infos = sblocks(graph)
         else:
-            sblock_sets = [set(graph.nodes())]
+            block_infos = [(set(graph.nodes()), True)]
 
         # Blocks are independent and can later be processed in parallel.
-        if self.config.parallel_sblocks and len(sblock_sets) > 1:
-            block_results: List[Tuple[List, int]] = [([], 0)] * len(sblock_sets)
+        if self.config.parallel_sblocks and len(block_infos) > 1:
+            block_results: List[Tuple[List, int]] = [([], 0)] * len(block_infos)
             with ThreadPoolExecutor(
                 max_workers=self.config.sblock_max_workers,
             ) as executor:
                 future_to_index = {
-                    executor.submit(self._solve_block, graph, block_set, solver): i
-                    for i, block_set in enumerate(sblock_sets)
+                    executor.submit(
+                        self._solve_block,
+                        graph,
+                        block_info[0],
+                        solver,
+                        block_info[1],
+                    ): i
+                    for i, block_info in enumerate(block_infos)
                 }
                 for future in as_completed(future_to_index):
                     block_results[future_to_index[future]] = future.result()
         else:
             block_results = [
-                self._solve_block(graph, block_set, solver) for block_set in sblock_sets
+                self._solve_block(
+                    graph, block_info[0], solver, block_info[1],
+                )
+                for block_info in block_infos
             ]
 
         sigma: List = []
@@ -72,6 +81,7 @@ class Reducer:
         graph: nx.DiGraph,
         sblock_set: Set,
         solver: Solver,
+        is_root_block: bool,
     ) -> Tuple[List, int]:
         """Solve one block and return partial order and block node-scanwidth."""
         if self.config.use_single_edge_shortcut:
@@ -84,6 +94,17 @@ class Reducer:
         history: List[Tuple[object, object]] = []
         if self.config.use_chain_suppression:
             subgraph, history = self._suppress_chain_vertices(subgraph)
+
+        # NOTE: Reticulation-path shortcut is intentionally disabled for now.
+        # if self.config.use_reticulation_path_shortcut and not is_root_block:
+        #     reticulation_path = self._solve_reticulation_path_block(subgraph)
+        #     if reticulation_path is not None:
+        #         partial_sigma, block_nsw = reticulation_path
+        #         if self.config.use_chain_suppression:
+        #             partial_sigma = self._unsuppress_chain_vertices(
+        #                 partial_sigma, history,
+        #             )
+        #         return partial_sigma, block_nsw
 
         sub_result = solver.solve(DAG(subgraph))
         partial_sigma = list(sub_result.extension.ordering)
@@ -147,4 +168,72 @@ class Reducer:
             idx = restored.index(w)
             restored.insert(idx + 1, v)
         return restored
+
+    # @staticmethod
+    # def _solve_reticulation_path_block(
+    #     subgraph: nx.DiGraph,
+    # ) -> Optional[Tuple[List, int]]:
+    #     """Solve special reticulation-path block using closed-form bound.
+
+    #     Returns ``None`` when the structural preconditions are not met.
+    #     """
+        
+    #     # By construction, this is biconnected.
+    #     # if not nx.is_biconnected(subgraph.to_undirected()):
+    #     #     return None
+
+    #     reticulations = [v for v in subgraph.nodes() if subgraph.in_degree(v) >= 2]
+    #     if not reticulations:
+    #         return None
+
+    #     topo_order = list(nx.topological_sort(subgraph))
+    #     topo_pos = {v: i for i, v in enumerate(topo_order)}
+    #     q = [v for v in topo_order if subgraph.in_degree(v) >= 2]
+    #     for v in q:
+    #         if subgraph.out_degree(v) > 1:
+    #             return None
+    #     for i in range(len(q) - 1):
+    #         if (q[i], q[i + 1]) not in subgraph.edges():
+    #             return None
+
+    #     ancestor_sets: List[Set] = [set(nx.ancestors(subgraph, qi)) | {qi} for qi in q]
+    #     A_sets: List[Set] = []
+    #     seen: Set = set()
+    #     for anc in ancestor_sets:
+    #         a_i = anc.difference(seen)
+    #         A_sets.append(a_i)
+    #         seen = seen.union(anc)
+    #     if seen != set(subgraph.nodes()):
+    #         return None
+
+    #     suffix_unions: List[Set] = [set() for _ in A_sets]
+    #     running_suffix: Set = set()
+    #     for i in reversed(range(len(A_sets))):
+    #         running_suffix = running_suffix.union(A_sets[i])
+    #         suffix_unions[i] = running_suffix.copy()
+
+    #     Z_sets: List[Set] = []
+    #     prefix_union: Set = set()
+    #     for i, A_i in enumerate(A_sets):
+    #         q_i = q[i]
+    #         prefix_union = prefix_union.union(A_i)
+    #         suffix_with_q_i = {q_i}.union(suffix_unions[i])
+    #         parents_of_suffix = {
+    #             u
+    #             for (u, v) in subgraph.edges()
+    #             if v in suffix_with_q_i and u not in suffix_with_q_i
+    #         }
+    #         Z_i = prefix_union.intersection(parents_of_suffix)
+    #         Z_sets.append(Z_i)
+
+    #     proof_order: List = []
+    #     for A_i in A_sets:
+    #         proof_order.extend(sorted(A_i, key=lambda x: topo_pos[x]))
+    #     ordering = list(reversed(proof_order))
+
+    #     extension = Extension(DAG(subgraph), ordering)
+    #     nsw = max(len(Z_i) for Z_i in Z_sets)
+    #     if nsw != extension.node_scanwidth():
+    #         return None
+    #     return ordering, nsw
 

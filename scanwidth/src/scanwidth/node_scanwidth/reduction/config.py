@@ -20,6 +20,9 @@ class ReducerConfig:
         If True, solve directed rooted trees directly.
     use_chain_suppression : bool, optional
         If True, apply chain-parent suppression on blocks before solving.
+    use_reticulation_path_shortcut : bool, optional
+        If True, apply the reticulation-path closed-form shortcut on
+        eligible non-root s-blocks after chain suppression.
     parallel_sblocks : bool, optional
         If True, solve independent s-block subproblems concurrently.
     sblock_max_workers : Optional[int], optional
@@ -31,5 +34,6 @@ class ReducerConfig:
     use_single_edge_shortcut: bool = True
     use_tree_shortcut: bool = True
     use_chain_suppression: bool = True
+    use_reticulation_path_shortcut: bool = True
     parallel_sblocks: bool = False
     sblock_max_workers: Optional[int] = None

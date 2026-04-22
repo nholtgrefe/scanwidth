@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Set, Union
+from typing import List, Set, Tuple, Union
 
 import networkx as nx
 
@@ -82,18 +82,24 @@ def infinity_for(graph: nx.DiGraph) -> int:
     return graph.number_of_edges() + 1
 
 
-def sblocks(graph: nx.DiGraph) -> List[Set]:
-    """Return node sets for s-blocks in merge order.
+def sblocks(graph: nx.DiGraph) -> List[Tuple[Set, bool]]:
+    """Return s-blocks as ``(block, is_root_block)`` in merge order.
 
     Parameters
     ----------
     graph : nx.DiGraph
         Input graph.
 
+    Notes
+    -----
+    If the graph has multiple roots, the decomposition contains a special
+    root block. This block is not biconnected in the original graph and
+    can be identified by its corresponding ``True`` flag.
+
     Returns
     -------
-    List[Set]
-        Ordered list of s-block node sets.
+    List[Tuple[Set, bool]]
+        Ordered list of tuples ``(block_nodes, is_root_block)``.
     """
     roots = {v for v in graph.nodes() if graph.in_degree(v) == 0}
     aux = graph.to_undirected()
@@ -116,28 +122,32 @@ def sblocks(graph: nx.DiGraph) -> List[Set]:
 
     rootblock_index = None
     for i, block in enumerate(sblock_sets):
-        node_name = f"block_{i}"
+        block_node = ("block", i)
         if roots.issubset(block):
             rootblock_index = i
-        sblock_cut_tree.add_node(node_name)
+        sblock_cut_tree.add_node(block_node)
         for v in dcut_vertices:
             if v in block:
-                sblock_cut_tree.add_edge(v, node_name)
+                sblock_cut_tree.add_edge(v, block_node)
 
     if rootblock_index is None:
-        return sblock_sets
+        return [(block, False) for block in sblock_sets]
 
     sblock_order = list(
         nx.dfs_preorder_nodes(
-            sblock_cut_tree, source=f"block_{rootblock_index}",
+            sblock_cut_tree, source=("block", rootblock_index),
         )
     )
     sblock_order = [
-        int(name[6:])
-        for name in sblock_order
-        if str(name).startswith("block_")
+        node[1]
+        for node in sblock_order
+        if isinstance(node, tuple) and len(node) == 2 and node[0] == "block"
     ]
-    return [sblock_sets[i] for i in sblock_order]
+    has_multiple_roots = len(roots) > 1
+    return [
+        (sblock_sets[i], has_multiple_roots and i == rootblock_index)
+        for i in sblock_order
+    ]
 
 
 def chain_vertices(graph: nx.DiGraph) -> List:

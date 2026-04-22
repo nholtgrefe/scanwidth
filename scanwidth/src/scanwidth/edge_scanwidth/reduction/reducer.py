@@ -26,7 +26,7 @@ class Reducer:
         """Solve edge scanwidth via s-block decomposition.
 
         Splits ``dag`` into s-blocks, handles trivial blocks directly,
-        contracts flow-edges inside non-trivial blocks, and delegates the
+        contracts chain vertices inside non-trivial blocks, and delegates the
         contracted subproblem to ``solver``. Partial extensions are then
         reassembled into a single extension.
 
@@ -48,7 +48,8 @@ class Reducer:
             return SolverResult(value=0, extension=Extension(dag, [vertex]))
 
         if self.config.use_sblocks:
-            sblock_sets = sblocks(graph)
+            block_infos = sblocks(graph)
+            sblock_sets = [block for block, _ in block_infos]
         else:
             sblock_sets = [set(graph.nodes())]
         if self.config.parallel_sblocks and len(sblock_sets) > 1:
@@ -97,15 +98,15 @@ class Reducer:
 
         history: List[tuple] = []
         reduced_subgraph = subgraph.copy()
-        if self.config.use_flow_suppression:
-            reduced_subgraph, history = self._suppress_flow_nodes(subgraph)
+        if self.config.use_chain_suppression:
+            reduced_subgraph, history = self._suppress_chain_vertices(subgraph)
 
         sub_result = solver.solve(DAG(reduced_subgraph))
         block_sw = sub_result.value
         partial_sigma = list(sub_result.extension.ordering)
 
-        if self.config.use_flow_suppression:
-            partial_sigma = self._unsuppress_flow_nodes(partial_sigma, history)
+        if self.config.use_chain_suppression:
+            partial_sigma = self._unsuppress_chain_vertices(partial_sigma, history)
 
         return partial_sigma, block_sw
 
@@ -147,7 +148,9 @@ class Reducer:
         return None
 
     @staticmethod
-    def _suppress_flow_nodes(subgraph: nx.DiGraph) -> Tuple[nx.DiGraph, List[tuple]]:
+    def _suppress_chain_vertices(
+        subgraph: nx.DiGraph,
+    ) -> Tuple[nx.DiGraph, List[tuple]]:
         """Contract suppressible chain vertices and return contraction history.
 
         Notes
@@ -166,8 +169,8 @@ class Reducer:
         return contracted, history
 
     @staticmethod
-    def _unsuppress_flow_nodes(partial_sigma: List, history: List[tuple]) -> List:
-        """Undo suppressed flow-node contractions in reverse order."""
+    def _unsuppress_chain_vertices(partial_sigma: List, history: List[tuple]) -> List:
+        """Undo suppressed chain-vertex contractions in reverse order."""
         restored = list(partial_sigma)
         for (w, v) in reversed(history):
             idx = restored.index(w)
