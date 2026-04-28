@@ -13,8 +13,8 @@ more tractable.
 ## Key Features
 
 - **Tree-extension and Extension classess**: classes that support
-(tree-)extensions of DAGs, let one compute scanwidth-bags and 
-convert to canonical tree-extenions
+(tree-)extensions of DAGs, provide computations for scanwidth-bags and 
+converting to canonical tree-extenions
 - **Exact and heuristic solvers**: XP, brute-force, partition-based exact
   methods (edge), ILP backend selection (node), and multiple heuristics for edge- and node-scanwidth.
 - **Reduction framework**: configurable `ReducerConfig`/`Reducer` pipelines for
@@ -51,10 +51,8 @@ the **[scanwidth docs](https://nholtgrefe.github.io/scanwidth/)**.
 
 ## Citation
 
-If you use `scanwidth` in your research, please cite:
+If you use `scanwidth` in your research, please cite the corresponding paper:
 
 > Niels Holtgrefe, Leo van Iersel, and Mark Jones. *Exact and heuristic computation of the scanwidth of directed acyclic graphs*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
 
-## License
-
-MIT License - see `LICENSE`.
+To view the experimental materials of the paper, go to the folder `experiments`.
