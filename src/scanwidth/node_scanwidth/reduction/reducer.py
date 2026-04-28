@@ -138,22 +138,27 @@ class Reducer:
     def _suppress_chain_vertices(
         subgraph: nx.DiGraph,
     ) -> Tuple[nx.DiGraph, List[Tuple[object, object]]]:
-        """Contract suppressible chain vertices and return contraction history.
+        """Suppress chain parent in each chain-parent/chain-child pair.
 
-        Notes
-        -----
-        Chain vertices are the same as flow vertices (indegree 1, outdegree 1).
         """
         reduced = subgraph.copy()
         history: List[Tuple[object, object]] = []
 
-        for v in chain_vertices(subgraph):
-            u = list(reduced.predecessors(v))[0]
-            w = list(reduced.successors(v))[0]
-            if (u, w) not in reduced.edges():
+        changed = True
+        while changed:
+            changed = False
+            for v in list(reduced.nodes()):
+                if v not in reduced.nodes() or v not in chain_vertices(reduced):
+                    continue
+                w = list(reduced.successors(v))[0]
+                if w not in chain_vertices(reduced):
+                    continue
+                u = list(reduced.predecessors(v))[0]
                 reduced.remove_node(v)
                 reduced.add_edge(u, w)
                 history.append((w, v))
+                changed = True
+                break
 
         return reduced, history
 

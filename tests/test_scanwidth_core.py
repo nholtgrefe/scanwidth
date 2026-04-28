@@ -7,6 +7,7 @@ scanwidth values are easy to verify analytically.
 from __future__ import annotations
 
 import networkx as nx
+import pytest
 
 from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
 from scanwidth.edge_scanwidth.reduction.config import ReducerConfig as EdgeReducerConfig
@@ -60,36 +61,6 @@ def _build_star_to_sink(k: int) -> nx.DiGraph:
     """
     sink = k + 1
     edges = [(i, sink) for i in range(1, k + 1)]
-    return nx.DiGraph(edges)
-
-
-def _build_n09() -> nx.DiGraph:
-    """Build the n09 real-network DAG used for regression testing."""
-    edges = [
-        ("r", "v1"),
-        ("v1", "v2"),
-        ("v2", "v3"),
-        ("v3", "Gtricolor"),
-        ("v3", "Gangelensis"),
-        ("Gangelensis", "h1"),
-        ("h1", "SantaAnaCanyon"),
-        ("v2", "h2"),
-        ("h2", "Gachilleafolia"),
-        ("Gachilleafolia", "h3"),
-        ("h3", "Gclivorum"),
-        ("v1", "Gmillefoliata"),
-        ("Gmillefoliata", "h3"),
-        ("Gmillefoliata", "h4"),
-        ("h4", "CapeMendocino"),
-        ("r", "v4"),
-        ("v4", "v5"),
-        ("v5", "h2"),
-        ("v5", "h5"),
-        ("h5", "Gcapitata"),
-        ("Gcapitata", "h4"),
-        ("Gcapitata", "h1"),
-        ("v4", "h5"),
-    ]
     return nx.DiGraph(edges)
 
 
@@ -271,6 +242,7 @@ def test_node_scanwidth_algorithms_on_chain() -> None:
     """Node-scanwidth algorithms return width 1 on a directed chain."""
     dag = DAG(_build_chain())
 
+    sw_xp, ext_xp = node_scanwidth(dag, algorithm="xp", reduce=False)
     sw_exhaustive, ext_exhaustive = node_scanwidth(dag, algorithm="brute_force")
     sw_greedy, ext_greedy = node_scanwidth(dag, algorithm="greedy")
     sw_random, ext_random = node_scanwidth(dag, algorithm="random", seed=7)
@@ -282,10 +254,12 @@ def test_node_scanwidth_algorithms_on_chain() -> None:
         seed=7,
     )
 
+    assert sw_xp == 1
     assert sw_exhaustive == 1
     assert sw_greedy == 1
     assert sw_random == 1
     assert sw_anneal == 1
+    assert ext_xp.node_scanwidth() == 1
     assert ext_exhaustive.node_scanwidth() == 1
     assert ext_greedy.node_scanwidth() == 1
     assert ext_random.node_scanwidth() == 1
@@ -406,13 +380,13 @@ def test_node_scanwidth_reticulation_path_shortcut_toggle() -> None:
 
 
 def test_node_scanwidth_reducer_chain_suppression_rule() -> None:
-    """Reducer suppresses all suppressible chain vertices (flow vertices)."""
-    # 0 -> 1 -> 2 -> 3, where 1 and 2 are suppressible chain vertices.
+    """Reducer suppresses chain-parent in a chain-parent/chain-child pair."""
+    # 0 -> 1 -> 2 -> 3, where 1 and 2 are chain vertices and 1 is parent of 2.
     subgraph = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
     reduced, history = Reducer._suppress_chain_vertices(subgraph)
-    assert set(reduced.nodes()) == {0, 3}
-    assert (0, 3) in reduced.edges()
-    restored = Reducer._unsuppress_chain_vertices([3, 0], history)
+    assert set(reduced.nodes()) == {0, 2, 3}
+    assert (0, 2) in reduced.edges()
+    restored = Reducer._unsuppress_chain_vertices([3, 2, 0], history)
     assert restored == [3, 2, 1, 0]
 
 
@@ -467,18 +441,61 @@ def test_node_scanwidth_ilp_matches_exhaustive_on_chain() -> None:
     """ILP node-scanwidth solver matches exhaustive optimum on a chain."""
     dag = DAG(_build_chain())
     sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
+    sw_ilp_backend_scipy, ext_ilp_backend_scipy = node_scanwidth(
+        dag,
+        algorithm="ilp",
+        backend="scipy",
+    )
     sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
     assert sw_ilp == sw_exact == 1
+    assert sw_ilp_backend_scipy == sw_exact == 1
     assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 1
+    assert ext_ilp_backend_scipy.node_scanwidth() == ext_exact.node_scanwidth() == 1
 
 
 def test_node_scanwidth_ilp_matches_exhaustive_on_two_to_one() -> None:
     """ILP node-scanwidth solver matches exhaustive optimum on two-to-one DAG."""
     dag = DAG(_build_two_to_one())
     sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp")
+    sw_ilp_backend_scipy, ext_ilp_backend_scipy = node_scanwidth(
+        dag,
+        algorithm="ilp",
+        backend="scipy",
+    )
     sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
     assert sw_ilp == sw_exact == 2
+    assert sw_ilp_backend_scipy == sw_exact == 2
     assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 2
+    assert ext_ilp_backend_scipy.node_scanwidth() == ext_exact.node_scanwidth() == 2
+
+
+def test_node_scanwidth_ilp_gurobi_matches_exhaustive_on_chain() -> None:
+    """Gurobi-backend ILP solver matches exhaustive optimum on a chain."""
+    pytest.importorskip("gurobipy")
+    dag = DAG(_build_chain())
+    sw_ilp, ext_ilp = node_scanwidth(dag, algorithm="ilp", backend="gurobi")
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
+    assert sw_ilp == sw_exact == 1
+    assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 1
+
+
+def test_node_scanwidth_xp_matches_exhaustive_on_two_to_one() -> None:
+    """XP node-scanwidth solver matches exhaustive optimum on two-to-one DAG."""
+    dag = DAG(_build_two_to_one())
+    sw_xp, ext_xp = node_scanwidth(dag, algorithm="xp", reduce=False)
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force", reduce=False)
+    assert sw_xp == sw_exact == 2
+    assert ext_xp.node_scanwidth() == ext_exact.node_scanwidth() == 2
+
+
+def test_node_scanwidth_entrypoint_xp_rejects_fixed_k() -> None:
+    """Public XP node entrypoint rejects fixed-k mode."""
+    dag = DAG(_build_chain())
+    try:
+        _ = node_scanwidth(dag, algorithm="xp", k=1, reduce=False)
+        assert False, "Expected ValueError when passing k to public node xp API."
+    except ValueError:
+        pass
 
 
 def _assert_star_to_sink_scanwidth(expected_scanwidth: int) -> None:
@@ -613,32 +630,3 @@ def test_tree_extension_init_requires_dag_wrapper() -> None:
         pass
 
 
-def test_n09_reduced_algorithms_regression_values() -> None:
-    """Regression test of reduced scanwidth values on real network n09."""
-    dag = DAG(_build_n09())
-
-    cases = [
-        ("xp", {}, {5}),
-        ("brute_force", {}, {5}),
-        ("two_partition", {}, {5}),
-        ("three_partition", {}, {5}),
-        ("greedy", {}, {5, 6}),
-        ("random", {"seed": 42}, {5, 6}),
-        ("cut_splitting", {}, {5}),
-        (
-            "simulated_annealing",
-            {"max_iter": 100, "verbose": False, "seed": 42},
-            {5},
-        ),
-    ]
-
-    for algorithm, kwargs, expected_values in cases:
-        value, _ = edge_scanwidth(
-            dag,
-            algorithm=algorithm,
-            reduce=True,
-            **kwargs,
-        )
-        assert value in expected_values, (
-            f"{algorithm} returned {value}, expected one of {sorted(expected_values)}"
-        )

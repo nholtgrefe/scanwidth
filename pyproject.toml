@@ -28,7 +28,21 @@ classifiers = [
 dependencies = [
     "networkx>=3.0.0",
     "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+scipy = [
     "scipy",
+]
+gurobi = [
+    "gurobipy",
+]
+ilp = [
+    "scipy",
+    "gurobipy",
 ]
 
 [tool.setuptools]

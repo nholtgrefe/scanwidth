@@ -11,6 +11,7 @@ from scanwidth.node_scanwidth.reduction.reducer import Reducer
 from scanwidth.node_scanwidth.solver.base import Solver
 from scanwidth.node_scanwidth.solver.exact.exhaustive import BruteForceSolver
 from scanwidth.node_scanwidth.solver.exact.ilp import ILPSolver
+from scanwidth.node_scanwidth.solver.exact.xp import XpSolver
 from scanwidth.node_scanwidth.solver.heuristic.greedy import GreedySolver
 from scanwidth.node_scanwidth.solver.heuristic.random import RandomSolver
 from scanwidth.node_scanwidth.solver.heuristic.simulated_annealing import (
@@ -33,8 +34,10 @@ def node_scanwidth(
     algorithm : str, optional
         Solver name. Supported values are:
 
+        - ``"xp"``: exact XP algorithm with increasing ``k``.
         - ``"brute_force"``: exact brute-force search over all extensions.
-        - ``"ilp"``: exact mixed-integer linear programming solver.
+        - ``"ilp"``: exact MILP solver with backend selection
+          (``backend="scipy"`` or ``backend="gurobi"``).
         - ``"greedy"``: greedy heuristic.
         - ``"random"``: random extension heuristic.
         - ``"simulated_annealing"``: simulated-annealing heuristic.
@@ -85,11 +88,19 @@ def node_scanwidth(
 
 def _build_solver(algorithm: str, kwargs: dict) -> Solver:
     """Instantiate a node-scanwidth solver from name and kwargs."""
+    if algorithm == "xp":
+        if "k" in kwargs:
+            raise ValueError(
+                "Public node_scanwidth(..., algorithm='xp') does not support "
+                "fixed-k mode."
+            )
+        return XpSolver()
     if algorithm == "brute_force":
         return BruteForceSolver()
     if algorithm == "ilp":
         raw_time_limit = kwargs.pop("time_limit", None)
         return ILPSolver(
+            backend=str(kwargs.pop("backend", "scipy")),
             time_limit=None if raw_time_limit is None else float(raw_time_limit),
             mip_rel_gap=float(kwargs.pop("mip_rel_gap", 0.0)),
             verbose=bool(kwargs.pop("verbose", False)),
@@ -108,6 +119,6 @@ def _build_solver(algorithm: str, kwargs: dict) -> Solver:
             seed=int(kwargs.pop("seed", 42)),
         )
     raise ValueError(
-        "algorithm must be one of {'brute_force', 'ilp', "
+        "algorithm must be one of {'xp', 'brute_force', 'ilp', "
         "'greedy', 'random', 'simulated_annealing'}"
     )

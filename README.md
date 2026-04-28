@@ -1,29 +1,71 @@
-# Computing the Scanwidth of DAGs
+# scanwidth
 
-This repository contains the source code for the Python package `scanwidth` as well as the experimental materials for the accompanying paper:
+Python package for computing edge-scanwidth and node-scanwidth of directed
+acyclic graphs (DAGs).
 
-**Exact and heuristic computation of the scanwidth of directed acyclic graphs**. *Niels Holtgrefe, Leo van Iersel, and Mark Jones*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
+## Installation
 
-The paper is based on the following MSc Thesis by the first author.
+Install the base package:
 
-**Computing the Scanwidth of Directed Acyclic Graphs**. *Niels Holtgrefe*, (2023).  
-Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5)
+```bash
+pip install scanwidth
+```
 
-If you use the package or any of the other contents in this repository in your research, please cite the paper.
+Install optional dependency groups:
+
+```bash
+# Development and test dependencies
+pip install scanwidth[dev]
+
+# SciPy backend for node ILP (algorithm="ilp", backend="scipy")
+pip install scanwidth[scipy]
+
+# Gurobi backend for node ILP (algorithm="ilp", backend="gurobi")
+pip install scanwidth[gurobi]
+
+# Both ILP backends
+pip install scanwidth[ilp]
+```
+
+`gurobipy` requires a working Gurobi installation and a valid Gurobi license
+(typically commercial, with academic licenses available separately from Gurobi).
+
+## Quick Start
+
+```python
+import networkx as nx
+from scanwidth import DAG
+from scanwidth.edge_scanwidth import edge_scanwidth
+from scanwidth.node_scanwidth import node_scanwidth
+
+graph = nx.read_edgelist(
+    "path/to/graph.el",
+    create_using=nx.DiGraph,
+    nodetype=str,
+)
+dag = DAG(graph)
+
+esw, ext = edge_scanwidth(dag, algorithm="xp")
+nsw, ext = node_scanwidth(dag, algorithm="ilp")
+```
 
 ## Repository Structure
 
-- **`scanwidth/`** - The Python package for computing scanwidth (installable via pip)
-  - See `scanwidth/README.md` for package documentation and installation instructions
-  
-- **`experiments/`** - Experimental materials used for the paper and thesis
-  - `scripts/` - Original Python scripts used for experiments
-  - `networks/` - Network data files (real and synthetic networks)
-  - `results/` - Experimental results
-  - See `experiments/README.md` for details
+- `src/scanwidth/`: installable Python package.
+- `tests/`: repository test suite (not part of the installed package).
+- `experiments/`: experimental materials (not part of the installed package).
 
-The experiments described in the paper and thesis were performed using the Python scripts in the `experiments/scripts/` folder. Version 0.1.0. of the installable `scanwidth` package is based on these scripts.
+For details on experiments, see `experiments/README.md`.
 
----
+## Citation
 
-> The preliminary arXiv version of the paper used a separate repository called `ComputingScanwidth`, which has been deleted. This repository is the most up-to-date version of the code and should be used instead.
+If you use this repository in research, please cite:
+
+**Exact and heuristic computation of the scanwidth of directed acyclic
+graphs**. *Niels Holtgrefe, Leo van Iersel, and Mark Jones*. Journal of
+Computer and System Sciences, 160:103802, 2026. doi:
+[10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
+
+## License
+
+MIT License - see `LICENSE`.
