@@ -42,11 +42,11 @@ What happens here:
 5. The returned extension object can also be inspected for its ordering and
    converted to a tree extension when needed.
 
-Reduction and reproducibility
------------------------------
+Reductions
+----------
 
 Both :func:`scanwidth.edge_scanwidth` and :func:`scanwidth.node_scanwidth`
-support reduction by default (``reduce=True``). Reduction often speeds up exact
+support reduction rules by default (``reduce=True``). Reduction often speeds up exact
 solvers and usually helps heuristics as well. Parallelization is also supported
 by passing `reducer_config=ReducerConfig(parallel_sblocks=True)`.
 

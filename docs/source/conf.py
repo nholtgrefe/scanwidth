@@ -4,6 +4,7 @@ from __future__ import annotations
 
 project = "scanwidth"
 author = "Niels Holtgrefe"
+copyright = "2026, Niels Holtgrefe"
 release = "0.2.0.dev"
 
 extensions = [

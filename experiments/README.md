@@ -1,12 +1,20 @@
 # Experimental Materials
 
-This directory contains all materials used for the experiments described in the paper and thesis.
+This directory contains all materials used for the experiments described in the following paper. Please cite the paper if you use these materials.
 
-## Citation
+> Niels Holtgrefe, Leo van Iersel, and Mark Jones. *Exact and heuristic computation of the scanwidth of directed acyclic graphs*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
 
-If you use these experimental materials in your research, please cite:
+The paper is based on the following master's thesis:
 
-**Exact and heuristic computation of the scanwidth of directed acyclic graphs**. *Niels Holtgrefe, Leo van Iersel, and Mark Jones*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
+> Niels Holtgrefe. *Computing the Scanwidth of Directed Acyclic Graphs*.  
+> MSc thesis, Delft University of Technology, Delft, The Netherlands, 2023.  
+> Available at: [http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5](http://resolver.tudelft.nl/uuid:9c82fd2a-5841-4aac-8e40-d4d22542cdf5)
+
+### Notes
+
+1. The scripts in this directory form the basis of `scanwidth` version `0.1.0`. The package has since been improved; for new use, prefer the installable package. These scripts are mainly kept for reproducibility of the original experiments.
+
+2. There was an older repository called `ComputingScanwidth` used for the preliminary arXiv version of the paper; it has been removed, and this repository should be used instead.
 
 ## Contents
 
@@ -65,6 +73,3 @@ This directory contains Excel files with the complete numerical results of all e
 
 The experiments are explained in Section 6 of the paper / Chapter 6 of the thesis.
 
-## Note
-
-The scripts in this directory were used to perform the experiments described in the paper and thesis. The `compute_scanwidth.py` script forms the basis of version 0.1.0 of the installable `scanwidth` package.

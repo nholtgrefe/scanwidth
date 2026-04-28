@@ -22,8 +22,8 @@ Citation
 
 If you use this package in research, please cite:
 
-   *Exact and heuristic computation of the scanwidth of directed acyclic graphs*.
-   Niels Holtgrefe, Leo van Iersel, and Mark Jones. Journal of Computer and
-   System Sciences, 160:103802, 2026.
-   `doi:10.1016/j.jcss.2026.103802 <https://doi.org/10.1016/j.jcss.2026.103802>`_
+   Niels Holtgrefe, Leo van Iersel, and Mark Jones. *Exact and heuristic
+   computation of the scanwidth of directed acyclic graphs*. Journal of Computer
+   and System Sciences, 160:103802, 2026. doi:
+   `10.1016/j.jcss.2026.103802 <https://doi.org/10.1016/j.jcss.2026.103802>`_.
 

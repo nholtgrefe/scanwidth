@@ -6,8 +6,9 @@ scanwidth values are easy to verify analytically.
 
 from __future__ import annotations
 
+import builtins
 import networkx as nx
-import pytest
+import pytest  # pyright: ignore[reportMissingImports]
 
 from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwidth
 from scanwidth.edge_scanwidth.reduction.config import ReducerConfig as EdgeReducerConfig
@@ -477,6 +478,47 @@ def test_node_scanwidth_ilp_gurobi_matches_exhaustive_on_chain() -> None:
     sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force")
     assert sw_ilp == sw_exact == 1
     assert ext_ilp.node_scanwidth() == ext_exact.node_scanwidth() == 1
+
+
+def test_node_scanwidth_ilp_rejects_unknown_backend() -> None:
+    """ILP node API rejects unsupported backend names."""
+    dag = DAG(_build_chain())
+    with pytest.raises(ValueError, match="Unknown ILP backend"):
+        _ = node_scanwidth(dag, algorithm="ilp", backend="unknown", reduce=False)
+
+
+def test_node_scanwidth_ilp_scipy_backend_missing_dependency_raises_import_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SciPy backend raises informative ImportError when SciPy is unavailable."""
+    original_import = builtins.__import__
+
+    def _patched_import(name: str, *args: object, **kwargs: object) -> object:
+        if name.startswith("scipy"):
+            raise ImportError("mocked missing scipy")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _patched_import)
+    dag = DAG(_build_chain())
+    with pytest.raises(ImportError, match="scanwidth\\[scipy\\]"):
+        _ = node_scanwidth(dag, algorithm="ilp", backend="scipy", reduce=False)
+
+
+def test_node_scanwidth_ilp_gurobi_backend_missing_dependency_raises_import_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Gurobi backend raises informative ImportError when gurobipy is unavailable."""
+    original_import = builtins.__import__
+
+    def _patched_import(name: str, *args: object, **kwargs: object) -> object:
+        if name == "gurobipy":
+            raise ImportError("mocked missing gurobipy")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _patched_import)
+    dag = DAG(_build_chain())
+    with pytest.raises(ImportError, match="scanwidth\\[gurobi\\]"):
+        _ = node_scanwidth(dag, algorithm="ilp", backend="gurobi", reduce=False)
 
 
 def test_node_scanwidth_xp_matches_exhaustive_on_two_to_one() -> None:

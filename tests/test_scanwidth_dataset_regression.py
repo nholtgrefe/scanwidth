@@ -190,7 +190,7 @@ def test_dataset_nsw_solvers_against_baseline(
     """All node solvers are validated against the pinned NSW baseline."""
     dag = DAG(graph)
     exact_cases = [
-        ("ilp", {}),
+        ("xp", {}),
     ]
     heuristic_cases = [
         ("greedy", {}),

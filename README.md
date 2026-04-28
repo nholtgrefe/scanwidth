@@ -53,10 +53,7 @@ the **[scanwidth docs](https://nholtgrefe.github.io/scanwidth/)**.
 
 If you use `scanwidth` in your research, please cite:
 
-> Niels Holtgrefe, Leo van Iersel, and Mark Jones.  
-> *Exact and heuristic computation of the scanwidth of directed acyclic graphs*.  
-> Journal of Computer and System Sciences, 160:103802, 2026.  
-> doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
+> Niels Holtgrefe, Leo van Iersel, and Mark Jones. *Exact and heuristic computation of the scanwidth of directed acyclic graphs*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
 
 ## License
 
