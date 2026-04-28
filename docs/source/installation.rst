@@ -48,3 +48,23 @@ Development dependencies:
 .. code-block:: bash
 
    pip install scanwidth[dev]
+
+
+Dependencies
+============
+The following dependencies are required for the base package,
+but are automatically installed when installing the package as above.
+
+- `networkx>=3.0.0`
+- `numpy>=1.20.0`
+
+for the ILP backend:
+- `scipy>=1.20.0`
+- `gurobipy>=1.20.0`
+
+for the documentation:
+- `sphinx>=7.0.0`
+- `pydata-sphinx-theme>=0.15.0`
+
+for the development:
+- `pytest>=8.0.0`
