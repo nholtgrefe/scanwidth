@@ -25,7 +25,7 @@ Documentation dependencies:
 
    pip install scanwidth[docs]
 
-Node-scanwidthILP backend dependencies:
+Node-scanwidth ILP backend dependencies:
 
 .. code-block:: bash
 
@@ -59,8 +59,8 @@ but are automatically installed when installing the package as above.
 - `numpy>=1.20.0`
 
 for the ILP backend:
-- `scipy>=1.20.0`
-- `gurobipy>=1.20.0`
+- `scipy>=1.9.0`
+- `gurobipy>=10.0.0`
 
 for the documentation:
 - `sphinx>=7.0.0`

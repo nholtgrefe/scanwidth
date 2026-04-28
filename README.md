@@ -44,6 +44,11 @@ pip install scanwidth[ilp]
 `gurobipy` requires a working Gurobi installation and a valid Gurobi license
 (commercial or academic, depending on your setup).
 
+Version requirements for optional ILP backends:
+
+- `scipy>=1.9.0`
+- `gurobipy>=10.0.0`
+
 ## Documentation
 
 For installation instructions, quickstart examples, and full API reference, see
