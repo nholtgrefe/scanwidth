@@ -17,6 +17,9 @@ Install optional dependency groups:
 # Development and test dependencies
 pip install scanwidth[dev]
 
+# Documentation dependencies
+pip install scanwidth[docs]
+
 # SciPy backend for node ILP (algorithm="ilp", backend="scipy")
 pip install scanwidth[scipy]
 
@@ -29,6 +32,12 @@ pip install scanwidth[ilp]
 
 `gurobipy` requires a working Gurobi installation and a valid Gurobi license
 (typically commercial, with academic licenses available separately from Gurobi).
+
+Build docs locally:
+
+```bash
+sphinx-build -b html docs/source docs/build/html
+```
 
 ## Quick Start
 

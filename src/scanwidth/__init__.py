@@ -14,4 +14,4 @@ __all__ = [
     "node_scanwidth",
 ]
 
-__version__ = "0.2.0.dev"
+__version__ = "0.2.0"
