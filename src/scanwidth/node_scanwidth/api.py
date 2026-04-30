@@ -21,7 +21,7 @@ from scanwidth.node_scanwidth.solver.heuristic.simulated_annealing import (
 
 def node_scanwidth(
     dag: DAG,
-    algorithm: str = "brute_force",
+    algorithm: str = "xp",
     reduce: bool = True,
     **kwargs: object,
 ) -> Tuple[int, Extension]:
