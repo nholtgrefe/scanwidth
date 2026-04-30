@@ -1,4 +1,11 @@
-"""Scanwidth package for computing scanwidth of directed acyclic graphs (DAGs)."""
+"""
+scanwidth
+=========
+
+`scanwidth` is a Python package for computing the edge- and node-scanwidth of a directed acyclic graph (DAG).
+
+See https://github.com/nholtgrefe/scanwidth for complete documentation.
+"""
 
 from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth import edge_scanwidth

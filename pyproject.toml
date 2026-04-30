@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "scanwidth"
 version = "0.2.3"
-description = "Package for computing the edge- and node-scanwidth of a directed acyclic graph (DAG)"
+description = "a package for computing the edge- and node-scanwidth of a directed acyclic graph (DAG)"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
