@@ -16,7 +16,7 @@ from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.solver.base import Solver
 from scanwidth.node_scanwidth.solver.heuristic.greedy import GreedySolver
 from scanwidth.node_scanwidth.solver.heuristic.random import RandomSolver
-from scanwidth.node_scanwidth.solver._utils import node_bag_size
+from scanwidth._utils import delta_in_parents
 from scanwidth.tree_extension import TreeExtension
 
 
@@ -42,7 +42,11 @@ class SimulatedAnnealingSolver(Solver):
 
         sw_values: Dict = {}
         for v in graph.nodes:
-            sw_values[v] = node_bag_size(graph, nx.descendants(tree, v) | {v})
+            sw_values[v] = delta_in_parents(
+                graph,
+                nx.descendants(tree, v) | {v},
+                sink=True,
+            )
 
         iteration_counter = 0
         best_tree = tree.copy()
@@ -182,5 +186,9 @@ def _random_neighbour_scanwidth(
         if connected:
             connected_vertices = connected_vertices | nx.descendants(tree, child) | {child}
 
-    new_sw_values[parent] = node_bag_size(graph, connected_vertices)
+    new_sw_values[parent] = delta_in_parents(
+        graph,
+        connected_vertices,
+        sink=True,
+    )
     return new_sw_values, vertex, parent, connected_vertices

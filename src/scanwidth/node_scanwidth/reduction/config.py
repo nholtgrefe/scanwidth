@@ -16,6 +16,9 @@ class ReducerConfig:
         If True, decompose into s-block subproblems.
     use_single_edge_shortcut : bool, optional
         If True, solve two-vertex single-edge blocks directly.
+    use_single_root_cycle_rule : bool, optional
+        If True, solve single-root cycle-like blocks directly with
+        node scanwidth 2 (same structure as edge reducer).
     use_tree_shortcut : bool, optional
         If True, solve directed rooted trees directly.
     use_chain_suppression : bool, optional
@@ -32,6 +35,7 @@ class ReducerConfig:
 
     use_sblocks: bool = True
     use_single_edge_shortcut: bool = True
+    use_single_root_cycle_rule: bool = True
     use_tree_shortcut: bool = True
     use_chain_suppression: bool = True
     use_reticulation_path_shortcut: bool = True

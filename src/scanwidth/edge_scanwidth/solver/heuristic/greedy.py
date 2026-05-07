@@ -53,7 +53,7 @@ class GreedySolver(Solver):
                 connected_vertices.add(leaf)
                 connection_dict[leaf] = connected_vertices
 
-                candidate_sw = delta_in(graph, connected_vertices)
+                candidate_sw = delta_in(graph, connected_vertices, sink=True)
                 if candidate_sw < chosen_sw:
                     chosen = leaf
                     chosen_sw = candidate_sw

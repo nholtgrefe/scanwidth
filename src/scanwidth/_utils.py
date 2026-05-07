@@ -2,15 +2,76 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import List, Set, Tuple, Union
+from weakref import WeakKeyDictionary
 
 import networkx as nx
+
+
+@dataclass
+class _ParentBoundaryCache:
+    """Per-graph cache for fast distinct-parent boundary counting."""
+
+    node_to_idx: dict
+    preds_idx: List[List[int]]
+    succ_idx: List[List[int]]
+    in_marks: List[int]
+    parent_marks: List[int]
+    in_epoch: int = 1
+    parent_epoch: int = 1
+
+
+_PARENT_BOUNDARY_CACHE: "WeakKeyDictionary[nx.DiGraph, _ParentBoundaryCache]" = (
+    WeakKeyDictionary()
+)
+
+_WCC_PARTITION_CACHE: "WeakKeyDictionary[nx.DiGraph, dict[frozenset, Tuple[frozenset, ...]]]" = (
+    WeakKeyDictionary()
+)
+
+
+def _parent_boundary_cache(graph: nx.DiGraph) -> _ParentBoundaryCache:
+    """Return cached integer adjacency structures for ``graph``."""
+    cache = _PARENT_BOUNDARY_CACHE.get(graph)
+    if cache is not None:
+        return cache
+
+    nodes = list(graph.nodes())
+    node_to_idx = {node: i for i, node in enumerate(nodes)}
+    n = len(nodes)
+
+    preds_idx: List[List[int]] = [[] for _ in range(n)]
+    succ_idx: List[List[int]] = [[] for _ in range(n)]
+    for (u, v) in graph.edges():
+        ui = node_to_idx[u]
+        vi = node_to_idx[v]
+        succ_idx[ui].append(vi)
+        preds_idx[vi].append(ui)
+
+    cache = _ParentBoundaryCache(
+        node_to_idx=node_to_idx,
+        preds_idx=preds_idx,
+        succ_idx=succ_idx,
+        in_marks=[0] * n,
+        parent_marks=[0] * n,
+    )
+    _PARENT_BOUNDARY_CACHE[graph] = cache
+    return cache
+
+
+def _next_epoch(current: int) -> int:
+    """Return next positive epoch value."""
+    next_value = current + 1
+    if next_value <= 0:
+        return 1
+    return next_value
 
 
 def delta_in(
     graph: nx.DiGraph,
     vertex_set: Union[Set, List],
-    sink: bool = True,
+    sink: bool = False,
 ) -> int:
     """Return the indegree of ``vertex_set`` in ``graph``.
 
@@ -43,6 +104,167 @@ def delta_in(
         if u not in vertex_set and v in vertex_set:
             res = res + 1
     return res
+
+
+def induced_subgraph_roots(
+    graph: nx.DiGraph,
+    vertices: Union[Set, List],
+) -> List:
+    """Return roots of the induced subgraph ``G[W]`` for ``W = vertices``.
+
+    A vertex ``v \\in W`` is a root of ``G[W]`` iff ``graph`` has no arc
+    ``(u, v)`` with ``u \\in W``.
+
+    Parameters
+    ----------
+    graph : nx.DiGraph
+        Host graph.
+    vertices : Union[Set, List]
+        Vertex set ``W``. If a list, roots are returned in that list order;
+        if a set, order follows ``list(vertices)``.
+
+    Returns
+    -------
+    List
+        Roots of ``G[W]``, in the order induced by ``list(vertices)``.
+    """
+    vertex_list = list(vertices)
+    W = set(vertex_list)
+    return [
+        v for v in vertex_list
+        if not any(pred in W for pred in graph.predecessors(v))
+    ]
+
+
+def induced_weakly_connected_components(
+    graph: nx.DiGraph,
+    vertices: Union[Set, List],
+) -> List[Set]:
+    """Return weakly connected components of the induced subgraph ``G[W]``.
+
+    Components are returned as mutable ``set`` objects (like NetworkX).
+    Results are cached per ``(graph, frozenset(W))`` so repeated queries
+    for the same vertex set reuse one NetworkX decomposition.
+
+    Component lists are sorted deterministically (lexicographic order of
+    sorted string vertex labels within each component) so cache hits and
+    misses agree on iteration order.
+
+    Parameters
+    ----------
+    graph : nx.DiGraph
+        Host graph.
+    vertices : Union[Set, List]
+        Vertex set ``W`` inducing ``G[W]``.
+
+    Returns
+    -------
+    List[Set]
+        Weakly connected components of ``G[W]``.
+    """
+    W = frozenset(vertices)
+    if not W:
+        return []
+
+    inner = _WCC_PARTITION_CACHE.get(graph)
+    if inner is None:
+        inner = {}
+        _WCC_PARTITION_CACHE[graph] = inner
+
+    cached = inner.get(W)
+    if cached is not None:
+        return [set(c) for c in cached]
+
+    subgraph = graph.subgraph(W)
+    raw = list(nx.weakly_connected_components(subgraph))
+    parts = tuple(
+        frozenset(c)
+        for c in sorted(
+            raw,
+            key=lambda s: tuple(sorted(str(v) for v in s)),
+        )
+    )
+    inner[W] = parts
+    return [set(c) for c in parts]
+
+
+def delta_in_parents(
+    graph: nx.DiGraph,
+    vertex_set: Union[Set, List],
+    sink: bool = False,
+) -> int:
+    """Return number of distinct parents outside ``vertex_set`` with an edge into it.
+
+    Parameters
+    ----------
+    graph : nx.DiGraph
+        Directed graph containing ``vertex_set``.
+    vertex_set : Union[Set, List]
+        Vertices that define the sink-side set.
+    sink : bool, optional
+        If True, treat ``vertex_set`` as a sink-set and use an optimized
+        strategy that inspects only one side of the boundary. If False,
+        scan all edges directly.
+
+    Returns
+    -------
+    int
+        Number of distinct parent vertices outside ``vertex_set`` that
+        have at least one edge into ``vertex_set``.
+    """
+    cache = _parent_boundary_cache(graph)
+    node_to_idx = cache.node_to_idx
+    n = len(cache.in_marks)
+
+    in_epoch = _next_epoch(cache.in_epoch)
+    cache.in_epoch = in_epoch
+    in_marks = cache.in_marks
+    vertices_idx: List[int] = []
+    for vertex in vertex_set:
+        idx = node_to_idx[vertex]
+        vertices_idx.append(idx)
+        in_marks[idx] = in_epoch
+
+    parent_epoch = _next_epoch(cache.parent_epoch)
+    cache.parent_epoch = parent_epoch
+    parent_marks = cache.parent_marks
+
+    boundary_count = 0
+    if sink:
+        # Pick the smaller side of the cut for boundary detection.
+        if len(vertices_idx) * 2 < n:
+            # ``W`` smaller: aggregate outside parents from incoming arcs of ``W``.
+            for vertex_idx in vertices_idx:
+                for parent_idx in cache.preds_idx[vertex_idx]:
+                    if (
+                        in_marks[parent_idx] != in_epoch
+                        and parent_marks[parent_idx] != parent_epoch
+                    ):
+                        parent_marks[parent_idx] = parent_epoch
+                        boundary_count += 1
+            return boundary_count
+
+        # ``V \ W`` smaller: count outside vertices with at least one child in ``W``.
+        for parent_idx in range(n):
+            if in_marks[parent_idx] == in_epoch:
+                continue
+            for child_idx in cache.succ_idx[parent_idx]:
+                if in_marks[child_idx] == in_epoch:
+                    boundary_count += 1
+                    break
+        return boundary_count
+
+    for parent_idx, child_idx in (
+        (node_to_idx[u], node_to_idx[v]) for (u, v) in graph.edges()
+    ):
+        if (
+            in_marks[parent_idx] != in_epoch
+            and in_marks[child_idx] == in_epoch
+            and parent_marks[parent_idx] != parent_epoch
+        ):
+            parent_marks[parent_idx] = parent_epoch
+            boundary_count += 1
+    return boundary_count
 
 
 def find_component(components: List[Set], v: object) -> Set:

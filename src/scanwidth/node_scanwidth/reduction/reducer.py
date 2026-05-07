@@ -89,7 +89,13 @@ class Reducer:
             if single_edge is not None:
                 return single_edge
 
-        subgraph = graph.subgraph(sblock_set).copy()
+        subgraph = graph.subgraph(sblock_set)
+        if self.config.use_single_root_cycle_rule:
+            cycle = self._solve_single_root_cycle_block(subgraph)
+            if cycle is not None:
+                return cycle
+
+        subgraph = subgraph.copy()
 
         history: List[Tuple[object, object]] = []
         if self.config.use_chain_suppression:
@@ -126,6 +132,34 @@ class Reducer:
         return [u, v], 1
 
     @staticmethod
+    def _solve_single_root_cycle_block(
+        subgraph: nx.DiGraph,
+    ) -> Optional[Tuple[List, int]]:
+        """Solve a single-root cycle-like block with node scanwidth 2.
+
+        Same structural pattern as :meth:`edge_scanwidth.reduction.Reducer.
+        _solve_single_root_cycle_block`.
+        """
+        roots = [
+            v for v in subgraph.nodes()
+            if subgraph.in_degree(v) == 0 and subgraph.out_degree(v) == 2
+        ]
+        leafs = [
+            v for v in subgraph.nodes()
+            if subgraph.out_degree(v) == 0 and subgraph.in_degree(v) == 2
+        ]
+        chain_nodes = chain_vertices(subgraph)
+
+        if (
+            len(roots) == 1
+            and len(leafs) == 1
+            and len(chain_nodes) == len(subgraph.nodes()) - 2
+        ):
+            partial_sigma = list(reversed(list(nx.topological_sort(subgraph))))
+            return partial_sigma, 2
+        return None
+
+    @staticmethod
     def _solve_tree(graph: nx.DiGraph) -> Optional[Tuple[List, int]]:
         """Solve graph directly if it is a directed rooted tree."""
         if not is_directed_tree(graph):
@@ -140,6 +174,11 @@ class Reducer:
     ) -> Tuple[nx.DiGraph, List[Tuple[object, object]]]:
         """Suppress chain parent in each chain-parent/chain-child pair.
 
+        Chain vertices are flow vertices (indegree 1, outdegree 1).  We only
+        suppress ``v`` when both ``v`` and its unique successor ``w`` lie in the
+        chain set.  The chain set is recomputed once per outer iteration so we
+        avoid calling :func:`chain_vertices` for every candidate ``v`` (O(n)
+        per inner scan).
         """
         reduced = subgraph.copy()
         history: List[Tuple[object, object]] = []
@@ -147,11 +186,12 @@ class Reducer:
         changed = True
         while changed:
             changed = False
+            chain_set = frozenset(chain_vertices(reduced))
             for v in list(reduced.nodes()):
-                if v not in reduced.nodes() or v not in chain_vertices(reduced):
+                if v not in chain_set:
                     continue
                 w = list(reduced.successors(v))[0]
-                if w not in chain_vertices(reduced):
+                if w not in chain_set:
                     continue
                 u = list(reduced.predecessors(v))[0]
                 reduced.remove_node(v)

@@ -13,6 +13,7 @@ from scanwidth.edge_scanwidth.solver.base import Solver
 from scanwidth._utils import (
     delta_in,
     find_component,
+    induced_weakly_connected_components,
     infinity_for,
 )
 from scanwidth.edge_scanwidth.types import SolverResult
@@ -62,10 +63,9 @@ class ThreePartitionSolver(Solver):
 
         if len(W) == 1:
             (w,) = W
-            subgraph = graph.subgraph(W.union(L))
-            components = list(nx.weakly_connected_components(subgraph))
+            components = induced_weakly_connected_components(graph, W.union(L))
             component = find_component(components, w)
-            psw = delta_in(graph, component)
+            psw = delta_in(graph, component, sink=True)
             sigma = [w]
         elif len(W) > 1:
             size = len(W) // 2

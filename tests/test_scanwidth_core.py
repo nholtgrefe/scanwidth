@@ -14,10 +14,14 @@ from scanwidth import DAG, Extension, TreeExtension, edge_scanwidth, node_scanwi
 from scanwidth.edge_scanwidth.reduction.config import ReducerConfig as EdgeReducerConfig
 from scanwidth.node_scanwidth.reduction.config import ReducerConfig as NodeReducerConfig
 from scanwidth.node_scanwidth.reduction.reducer import Reducer
+from scanwidth.node_scanwidth.solver.exact.xp import XpSolver
 from scanwidth._utils import (
     chain_vertices,
+    delta_in_parents,
     delta_in,
     find_component,
+    induced_subgraph_roots,
+    induced_weakly_connected_components,
     infinity_for,
     is_directed_tree,
     sblocks,
@@ -284,6 +288,27 @@ def test_node_scanwidth_reducer_tree_rule_returns_one() -> None:
     assert extension.node_scanwidth() == 1
 
 
+def test_node_scanwidth_single_root_cycle_rule_toggle() -> None:
+    """Single-root cycle shortcut toggle keeps optimal value on diamond DAG."""
+    graph = nx.DiGraph([("r", "a"), ("r", "b"), ("a", "q"), ("b", "q")])
+    dag = DAG(graph)
+
+    value_on, ext_on = node_scanwidth(
+        dag,
+        algorithm="xp",
+        reduce=True,
+        reducer_config=NodeReducerConfig(use_single_root_cycle_rule=True),
+    )
+    value_off, ext_off = node_scanwidth(
+        dag,
+        algorithm="xp",
+        reduce=True,
+        reducer_config=NodeReducerConfig(use_single_root_cycle_rule=False),
+    )
+    assert value_on == value_off == 2
+    assert ext_on.node_scanwidth() == ext_off.node_scanwidth() == 2
+
+
 def test_node_scanwidth_singleton_graph_shortcut_returns_zero() -> None:
     """Node reducer returns zero and trivial extension on singleton graph."""
     graph = nx.DiGraph()
@@ -418,10 +443,143 @@ def test_global_edge_solver_utils_match_basic_expectations() -> None:
     vertices = {3}
     components = [{1, 2}, {3}]
 
-    assert delta_in(graph, vertices) == 2
+    assert delta_in(graph, vertices, sink=True) == 2
     assert find_component(components, 3) == {3}
     assert find_component(components, "missing") == set()
     assert infinity_for(graph) == graph.number_of_edges() + 1
+
+
+def test_delta_in_parents_sink_and_full_scan_are_consistent() -> None:
+    """Node-bag helper returns same value for sink and full-scan modes."""
+    graph = nx.DiGraph(
+        [
+            ("a", "c"),
+            ("b", "c"),
+            ("b", "d"),
+            ("e", "d"),
+            ("d", "f"),
+            ("c", "f"),
+        ]
+    )
+    connected_vertices = {"c", "d", "f"}
+
+    sink_value = delta_in_parents(graph, connected_vertices, sink=True)
+    full_scan_value = delta_in_parents(graph, connected_vertices, sink=False)
+
+    assert sink_value == 3
+    assert full_scan_value == 3
+    assert sink_value == full_scan_value
+
+
+def test_delta_in_parents_accepts_list_vertices() -> None:
+    """Node-bag helper accepts list input and keeps sink optimization exact."""
+    graph = nx.DiGraph([(1, 4), (2, 4), (3, 5), (4, 6), (5, 6)])
+    connected_vertices = [4, 5, 6]
+
+    sink_value = delta_in_parents(graph, connected_vertices, sink=True)
+    full_scan_value = delta_in_parents(graph, connected_vertices, sink=False)
+
+    assert sink_value == 3
+    assert full_scan_value == 3
+
+
+def test_node_xp_auxiliary_chain_suppression_keeps_exact_value() -> None:
+    """XP auxiliary suppression keeps exact value on non-adjacent chain node."""
+    graph = nx.DiGraph(
+        [
+            ("r", "x"),
+            ("y", "z"),
+            ("x", "z"),
+            ("z", "t"),
+        ]
+    )
+    dag = DAG(graph)
+
+    aux_graph, represented_vertices, expansion_history = (
+        XpSolver._suppress_auxiliary_chain_vertices(graph)
+    )
+    assert "x" not in aux_graph.nodes()
+    assert "x" in represented_vertices["z"]
+    assert ("z", "x") in expansion_history
+
+    sw_xp, ext_xp = node_scanwidth(dag, algorithm="xp", reduce=False)
+    sw_exact, ext_exact = node_scanwidth(dag, algorithm="brute_force", reduce=False)
+    assert sw_xp == sw_exact
+    assert ext_xp.node_scanwidth() == ext_exact.node_scanwidth()
+    assert set(ext_xp.ordering) == set(graph.nodes())
+
+
+def test_node_xp_auxiliary_suppression_handles_newly_created_degree_two() -> None:
+    """Aux suppression continues when removing one node creates another chain."""
+    graph = nx.DiGraph([(0, 1), (1, 2), (2, 3)])
+    aux_graph, _, history = XpSolver._suppress_auxiliary_chain_vertices(graph)
+
+    assert set(aux_graph.nodes()) == {0, 3}
+    assert set(aux_graph.edges()) == {(0, 3)}
+    assert len(history) == 2
+
+
+def test_induced_subgraph_roots_matches_subgraph_in_degree() -> None:
+    """Roots of ``G[W]`` agree with ``subgraph(W).in_degree(v) == 0``."""
+    graph = nx.DiGraph(
+        [
+            ("a", "c"),
+            ("b", "c"),
+            ("b", "d"),
+            ("e", "d"),
+            ("d", "f"),
+            ("c", "f"),
+        ]
+    )
+    for vertices in (["c", "d", "f"], {"c", "d", "f"}, ["f", "d", "c"]):
+        vertex_list = list(vertices)
+        subgraph = graph.subgraph(vertex_list)
+        expected = [v for v in vertex_list if subgraph.in_degree(v) == 0]
+        assert induced_subgraph_roots(graph, vertices) == expected
+
+
+def _wcc_partition_as_frozensets(
+    graph: nx.DiGraph,
+    vertices: set,
+) -> set[frozenset]:
+    """Normalize NetworkX weak components to a set of frozensets."""
+    raw = list(nx.weakly_connected_components(graph.subgraph(vertices)))
+    return {frozenset(c) for c in raw}
+
+
+def test_induced_weakly_connected_components_matches_networkx() -> None:
+    """Cached WCC helper agrees with ``nx.weakly_connected_components``."""
+    graph = nx.DiGraph(
+        [
+            ("a", "c"),
+            ("b", "c"),
+            ("b", "d"),
+            ("e", "d"),
+            ("d", "f"),
+            ("c", "f"),
+        ]
+    )
+    for vertices in ({"c", "d", "f"}, {"a", "b", "e"}, set(graph.nodes())):
+        expected = _wcc_partition_as_frozensets(graph, vertices)
+        once = induced_weakly_connected_components(graph, vertices)
+        twice = induced_weakly_connected_components(graph, vertices)
+        assert {frozenset(c) for c in once} == expected
+        assert {frozenset(c) for c in twice} == expected
+
+
+def test_induced_weakly_connected_components_empty_vertex_set() -> None:
+    """Induced WCC on empty ``W`` is an empty component list."""
+    graph = nx.DiGraph([(1, 2)])
+    assert induced_weakly_connected_components(graph, []) == []
+    assert induced_weakly_connected_components(graph, set()) == []
+
+
+def test_induced_subgraph_roots_partial_induced_and_order() -> None:
+    """External predecessors do not block roots; list order is preserved."""
+    graph = nx.DiGraph([(0, 1), (1, 2), (1, 3)])
+    assert set(induced_subgraph_roots(graph, [2, 3])) == {2, 3}
+    assert induced_subgraph_roots(graph, [1, 2]) == [1]
+    assert induced_subgraph_roots(graph, [3, 2]) == [3, 2]
 
 
 def test_global_chain_vertices_matches_flow_vertex_definition() -> None:
@@ -573,6 +731,16 @@ def test_edge_scanwidth_entrypoint_xp() -> None:
 
     assert sw == 1
     assert ext.edge_scanwidth() == 1
+
+
+def test_edge_scanwidth_entrypoint_xp_accepts_mixed_label_types() -> None:
+    """XP edge solver handles mixed node-label types without sort errors."""
+    graph = nx.DiGraph([(1, "a"), ("a", "b"), (2, "b")])
+    dag = DAG(graph)
+    sw, ext = edge_scanwidth(dag, algorithm="xp", reduce=False)
+
+    assert sw == ext.edge_scanwidth()
+    assert set(ext.ordering) == set(graph.nodes())
 
 
 def test_edge_scanwidth_entrypoint_xp_rejects_fixed_k() -> None:

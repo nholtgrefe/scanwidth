@@ -9,8 +9,7 @@ from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.solver.base import Solver
-from scanwidth._utils import infinity_for
-from scanwidth.node_scanwidth.solver._utils import node_bag_size
+from scanwidth._utils import delta_in_parents, infinity_for
 
 
 @dataclass(frozen=True)
@@ -43,7 +42,11 @@ class GreedySolver(Solver):
                 connected_vertices.add(leaf)
                 connection_dict[leaf] = connected_vertices
 
-                candidate_sw = node_bag_size(graph, connected_vertices)
+                candidate_sw = delta_in_parents(
+                    graph,
+                    connected_vertices,
+                    sink=True,
+                )
                 if candidate_sw < chosen_sw:
                     chosen = leaf
                     chosen_sw = candidate_sw

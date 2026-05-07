@@ -9,7 +9,12 @@ import networkx as nx
 
 from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.solver.base import Solver
-from scanwidth._utils import delta_in, infinity_for
+from scanwidth._utils import (
+    delta_in,
+    induced_subgraph_roots,
+    induced_weakly_connected_components,
+    infinity_for,
+)
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 
@@ -135,15 +140,14 @@ class XpSolver(Solver):
     ) -> Tuple[int, List]:
         """Compute restricted partial scanwidth with component splitting."""
         vertex_list = list(vertices)
-        subgraph = graph.subgraph(vertex_list)
-        roots = [v for v in subgraph.nodes() if subgraph.in_degree(v) == 0]
+        roots = induced_subgraph_roots(graph, vertex_list)
 
-        key = repr(sorted(roots))
+        key = repr(sorted(roots, key=str))
         cached = table.get(key)
         if cached is not None:
             return cached
 
-        delta_in_W = delta_in(graph, vertices)
+        delta_in_W = delta_in(graph, vertices, sink=True)
         rpsw = infinity
         sigma: List = []
 
@@ -151,7 +155,7 @@ class XpSolver(Solver):
             rpsw = delta_in_W
             sigma = [vertex_list[0]]
         else:
-            components = list(nx.weakly_connected_components(subgraph))
+            components = induced_weakly_connected_components(graph, vertex_list)
 
             if len(components) > 1:
                 rpsw_list = []

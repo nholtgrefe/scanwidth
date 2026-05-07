@@ -59,7 +59,7 @@ class RandomSolver(Solver):
                     connected_vertices = connected_vertices | comp
             connected_vertices.add(leaf)
 
-            leaf_sw = delta_in(graph, connected_vertices)
+            leaf_sw = delta_in(graph, connected_vertices, sink=True)
 
             remaining.remove(leaf)
             sigma.append(leaf)

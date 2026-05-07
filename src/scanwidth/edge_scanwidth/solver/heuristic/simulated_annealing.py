@@ -75,7 +75,11 @@ class SimulatedAnnealingSolver(Solver):
 
         sw_values: Dict = {}
         for v in graph.nodes:
-            sw_values[v] = delta_in(graph, nx.descendants(tree, v) | {v})
+            sw_values[v] = delta_in(
+                graph,
+                nx.descendants(tree, v) | {v},
+                sink=True,
+            )
 
         iteration_counter = 0
         best_tree = tree.copy()
@@ -233,5 +237,5 @@ def _random_neighbour_scanwidth(
                 connected_vertices | nx.descendants(tree, child) | {child}
             )
 
-    new_sw_values[parent] = delta_in(graph, connected_vertices)
+    new_sw_values[parent] = delta_in(graph, connected_vertices, sink=True)
     return new_sw_values, vertex, parent, connected_vertices

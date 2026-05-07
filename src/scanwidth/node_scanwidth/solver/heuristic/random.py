@@ -11,7 +11,7 @@ from scanwidth.dag import DAG
 from scanwidth.edge_scanwidth.types import SolverResult
 from scanwidth.extension import Extension
 from scanwidth.node_scanwidth.solver.base import Solver
-from scanwidth.node_scanwidth.solver._utils import node_bag_size
+from scanwidth._utils import delta_in_parents
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ class RandomSolver(Solver):
                     connected_vertices = connected_vertices | comp
             connected_vertices.add(leaf)
 
-            leaf_sw = node_bag_size(graph, connected_vertices)
+            leaf_sw = delta_in_parents(graph, connected_vertices, sink=True)
 
             remaining.remove(leaf)
             sigma.append(leaf)
