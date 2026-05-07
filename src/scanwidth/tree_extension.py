@@ -60,7 +60,7 @@ class TreeExtension:
             The scanwidth value.
         """
 
-        return max(len(self.edge_scanwidth_bag(v)) for v in self.tree.nodes())
+        return max(len(bag) for bag in self.edge_scanwidth_bags().values())
 
     def node_scanwidth(self) -> int:
         """Calculate node scanwidth of the tree extension for the DAG.
@@ -70,7 +70,97 @@ class TreeExtension:
         int
             The node scanwidth value.
         """
-        return max(len(self.node_scanwidth_bag(v)) for v in self.tree.nodes())
+        return max(len(bag) for bag in self.node_scanwidth_bags().values())
+
+    def edge_scanwidth_bags(self) -> dict[object, set[tuple[object, object]]]:
+        """Return edge scanwidth bags for all tree vertices.
+
+        Returns
+        -------
+        dict[object, set[tuple[object, object]]]
+            Mapping from tree vertex to its edge scanwidth bag.
+        """
+        root = next(v for v in self.tree.nodes() if self.tree.in_degree(v) == 0)
+        parent: dict[object, object | None] = {root: None}
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            for child in self.tree.successors(node):
+                parent[child] = node
+                stack.append(child)
+
+        tin: dict[object, int] = {}
+        tout: dict[object, int] = {}
+        time_idx = 0
+        dfs_stack: list[tuple[object, bool]] = [(root, False)]
+        while dfs_stack:
+            node, exiting = dfs_stack.pop()
+            if not exiting:
+                tin[node] = time_idx
+                time_idx += 1
+                dfs_stack.append((node, True))
+                for child in reversed(list(self.tree.successors(node))):
+                    dfs_stack.append((child, False))
+            else:
+                tout[node] = time_idx
+                time_idx += 1
+
+        def is_ancestor(ancestor: object, descendant: object) -> bool:
+            return tin[ancestor] <= tin[descendant] and tout[descendant] <= tout[ancestor]
+
+        edge_bags: dict[object, set[tuple[object, object]]] = {
+            v: set() for v in self.tree.nodes()
+        }
+        for (u, w) in self.dag.graph.edges():
+            current: object | None = w
+            while current is not None and not is_ancestor(current, u):
+                edge_bags[current].add((u, w))
+                current = parent[current]
+        return edge_bags
+
+    def node_scanwidth_bags(self) -> dict[object, set[object]]:
+        """Return node scanwidth bags for all tree vertices.
+
+        Returns
+        -------
+        dict[object, set[object]]
+            Mapping from tree vertex to its node scanwidth bag.
+        """
+        root = next(v for v in self.tree.nodes() if self.tree.in_degree(v) == 0)
+        parent: dict[object, object | None] = {root: None}
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            for child in self.tree.successors(node):
+                parent[child] = node
+                stack.append(child)
+
+        tin: dict[object, int] = {}
+        tout: dict[object, int] = {}
+        time_idx = 0
+        dfs_stack: list[tuple[object, bool]] = [(root, False)]
+        while dfs_stack:
+            node, exiting = dfs_stack.pop()
+            if not exiting:
+                tin[node] = time_idx
+                time_idx += 1
+                dfs_stack.append((node, True))
+                for child in reversed(list(self.tree.successors(node))):
+                    dfs_stack.append((child, False))
+            else:
+                tout[node] = time_idx
+                time_idx += 1
+
+        def is_ancestor(ancestor: object, descendant: object) -> bool:
+            return tin[ancestor] <= tin[descendant] and tout[descendant] <= tout[ancestor]
+
+        node_bags: dict[object, set[object]] = {v: set() for v in self.tree.nodes()}
+        for (u, w) in self.dag.graph.edges():
+            current: object | None = w
+            while current is not None and not is_ancestor(current, u):
+                node_bags[current].add(u)
+                current = parent[current]
+        return node_bags
 
     def edge_scanwidth_bag(self, vertex: object) -> set:
         """Return the set of edges in the edge scanwidth bag for a tree vertex.
@@ -129,7 +219,7 @@ class TreeExtension:
             for (u, w) in self.dag.graph.edges()
             if u not in left and w in left
         }
-    
+
     def to_extension(self) -> 'Extension':
         """Return an extension of the tree.
         

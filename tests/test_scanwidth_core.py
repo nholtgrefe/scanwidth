@@ -201,6 +201,46 @@ def test_tree_extension_node_scanwidth_bag_matches_edge_parents() -> None:
         assert len(tree_extension.node_scanwidth_bag(vertex)) <= tree_extension.node_scanwidth()
 
 
+def test_tree_extension_plural_bags_match_single_vertex_queries() -> None:
+    """Plural bag helpers match per-vertex bag helpers exactly."""
+    tree_extension = Extension(
+        dag=DAG(_build_two_to_one()), ordering=[3, 1, 2],
+    ).canonical_tree_extension()
+
+    edge_bags = tree_extension.edge_scanwidth_bags()
+    node_bags = tree_extension.node_scanwidth_bags()
+
+    assert set(edge_bags.keys()) == set(tree_extension.tree.nodes())
+    assert set(node_bags.keys()) == set(tree_extension.tree.nodes())
+    for vertex in tree_extension.tree.nodes():
+        assert edge_bags[vertex] == tree_extension.edge_scanwidth_bag(vertex)
+        assert node_bags[vertex] == tree_extension.node_scanwidth_bag(vertex)
+
+
+def test_tree_extension_edge_scanwidth_bags_match_singular_queries() -> None:
+    """Plural edge bags coincide with per-vertex edge bag queries."""
+    tree_extension = Extension(
+        dag=DAG(_build_chain()), ordering=[3, 2, 1],
+    ).canonical_tree_extension()
+    edge_bags = tree_extension.edge_scanwidth_bags()
+
+    assert set(edge_bags.keys()) == set(tree_extension.tree.nodes())
+    for vertex in tree_extension.tree.nodes():
+        assert edge_bags[vertex] == tree_extension.edge_scanwidth_bag(vertex)
+
+
+def test_tree_extension_node_scanwidth_bags_match_singular_queries() -> None:
+    """Plural node bags coincide with per-vertex node bag queries."""
+    tree_extension = Extension(
+        dag=DAG(_build_chain()), ordering=[3, 2, 1],
+    ).canonical_tree_extension()
+    node_bags = tree_extension.node_scanwidth_bags()
+
+    assert set(node_bags.keys()) == set(tree_extension.tree.nodes())
+    for vertex in tree_extension.tree.nodes():
+        assert node_bags[vertex] == tree_extension.node_scanwidth_bag(vertex)
+
+
 def test_exact_functions_match_known_chain_scanwidth() -> None:
     """All exact solvers compute scanwidth 1 on a directed chain."""
     dag = DAG(_build_chain())
