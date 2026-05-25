@@ -60,4 +60,10 @@ If you use `scanwidth` in your research, please cite the corresponding paper:
 
 > Niels Holtgrefe, Leo van Iersel, and Mark Jones. *Exact and heuristic computation of the scanwidth of directed acyclic graphs*. Journal of Computer and System Sciences, 160:103802, 2026. doi: [10.1016/j.jcss.2026.103802](https://doi.org/10.1016/j.jcss.2026.103802)
 
-To view the experimental materials of the paper, go to the folder `experiments`.
+If your work builds specifically on the node-scanwidth algorithms, please also cite the following paper describing them:
+
+> Niels Holtgrefe and Jannik Schestag.
+> **Tractable Optimization of Budgeted Phylogenetic Diversity on Networks Utilizing Node-Scanwidth.**
+> *arXiv:*[2605.23319](https://arxiv.org/abs/2605.23319), 2026.
+
+To view the experimental materials of the first paper, go to the folder `experiments`.

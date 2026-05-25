@@ -27,3 +27,7 @@ If you use this package in research, please cite:
    and System Sciences, 160:103802, 2026. doi:
    `10.1016/j.jcss.2026.103802 <https://doi.org/10.1016/j.jcss.2026.103802>`_.
 
+If your work builds specifically on the node-scanwidth algorithms, please also cite the following paper describing them:
+
+   Niels Holtgrefe and Jannik Schestag. *Tractable Optimization of Budgeted Phylogenetic Diversity on Networks Utilizing Node-Scanwidth.*. 2026.
+   doi: `10.48550/arXiv.2605.23319 <https://doi.org/10.48550/arXiv.2605.23319>`_.
