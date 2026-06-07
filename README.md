@@ -1,5 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/scanwidth)](https://pypi.org/project/scanwidth/)
-[![License](https://img.shields.io/github/license/nholtgrefe/scanwidth)](https://github.com/nholtgrefe/scanwidth/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue)](https://github.com/nholtgrefe/scanwidth/blob/main/LICENSE)
 [![Docs](https://img.shields.io/badge/docs-stable-blue)](https://nholtgrefe.github.io/scanwidth/)
 [![JCSS DOI](https://img.shields.io/badge/JCSS-10.1016%2Fj.jcss.2026.103802-blue)](https://doi.org/10.1016/j.jcss.2026.103802)
 
